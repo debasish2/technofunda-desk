@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Setup Desk Screener</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f4fe0'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
+<style>
+body{overflow-x:hidden}
+main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:360px minmax(0,1fr);align-items:start}
+.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line);min-height:0}
+.sidehd{padding:18px 20px 10px;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+.ftog{display:none;text-transform:none;letter-spacing:0;font-size:13px;padding:6px 14px}
+#filters{flex:1;overflow-y:auto;min-height:0;padding:0 12px 8px}
+.group{border:1px solid var(--line);border-radius:12px;margin:0 0 8px;background:var(--panel)}
+.group[open]{box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.group summary{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;list-style:none;font-weight:500;user-select:none;border-radius:12px}
+.group summary:hover{background:var(--soft)}
+.group summary::-webkit-details-marker{display:none}
+.group summary::after{content:'';width:7px;height:7px;border-right:1.6px solid var(--muted);border-bottom:1.6px solid var(--muted);transform:rotate(-45deg);transition:transform .12s;margin-left:8px}
+.group[open] summary::after{transform:rotate(45deg)}
+.group summary>span:first-of-type{flex:1}
+.group .cnt{background:var(--accent);color:#fff;border-radius:999px;padding:0 8px;font-size:12px;min-width:20px;text-align:center}
+.group .note{margin:0 14px 8px}
+.grid{display:block;padding:2px 14px 10px;border-top:1px solid var(--line)}
+.f{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;padding:7px 0}
+.f label{display:flex;align-items:center;gap:10px;cursor:pointer;flex:1 1 auto;color:var(--ink)}
+.f input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none}
+.f .ctl{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1 0 100%;padding-left:26px}
+.f:not(.on) .ctl{display:none}
+.f select,.f input[type=number],.minv input{height:34px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0 10px}
+.f input[type=number]{width:88px}
+.f select{max-width:100%}
+.help{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--line);color:var(--muted);font-size:11px;cursor:help}
+.sbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--line);background:var(--panel)}
+.minv{flex:1 0 100%;display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:13px}
+.minv input{width:84px;text-align:right}
+.go{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:9px 22px;font-weight:500}
+.go:hover{filter:brightness(1.08)}.go:disabled{opacity:.6}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 16px;color:var(--ink)}
+.pill:hover{border-color:var(--accent);color:var(--accent)}
+.out{padding:26px 32px 60px;min-width:0}
+.outhd{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 18px}
+.out h1{font-size:24px;font-weight:600;margin:0 0 2px;letter-spacing:-.01em}
+.out .sub{margin:0}
+.outhd>div:first-child{flex:1 1 300px}
+.tablebox td.ind,.tablebox th[data-k=industry]{text-align:left}
+.search{position:relative;flex:0 1 340px;min-width:220px}
+.search input{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:0 12px 0 36px}
+.search svg{position:absolute;left:12px;top:12px;color:var(--muted)}
+.chiprow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.chiprow>.mut{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;min-width:92px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
+.chips button:hover{border-color:var(--accent);color:var(--accent)}
+.chiprow[hidden]{display:none}
+.sv{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--panel);overflow:hidden}
+.sv button{border:0;background:none;padding:6px 12px;font-size:13px}
+.sv button:hover{color:var(--accent)}
+.sv .n{color:var(--muted);margin-left:6px}.sv .new{margin-left:6px;background:var(--accent);color:#fff;border-radius:999px;padding:0 7px;font-size:11.5px}
+.sv.act{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}
+.sv .x{padding:6px 10px;color:var(--muted);border-left:1px solid var(--line)}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:44px 24px;text-align:center;color:var(--muted);margin-top:14px}
+.funnel{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:18px 0 14px}
+.funnel .st{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 13px}
+.funnel .st b{font-size:14px}
+.funnel .st.last{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+.funnel .ar{color:var(--muted)}
+.result .head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.result .head .r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tag{display:inline-block;padding:1px 9px;border-radius:999px;font-size:12px;background:var(--soft);border:1px solid var(--line)}
+.tag.up{color:var(--up);background:color-mix(in srgb,var(--up) 10%,var(--panel));border-color:color-mix(in srgb,var(--up) 25%,var(--line))}
+.tag.down{color:var(--down);background:color-mix(in srgb,var(--down) 10%,var(--panel));border-color:color-mix(in srgb,var(--down) 25%,var(--line))}
+.colmenu{position:relative}
+.colpop{position:absolute;right:0;top:44px;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 34px rgba(16,24,40,.14);padding:10px 14px;min-width:210px}
+.colpop[hidden]{display:none}
+.colpop label{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer}
+.tablebox{overflow:auto;max-height:calc(100vh - 300px);min-height:240px;padding:0;border-radius:14px}
+.tablebox table{border-collapse:separate;border-spacing:0}
+.tablebox thead th{top:0;z-index:2;padding:12px 14px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tablebox thead th[aria-sort]{color:var(--accent)}
+.tablebox td{padding:0 14px;height:46px;border-bottom:1px solid var(--line)}
+.tablebox tbody tr{border-bottom:0}
+.tablebox tbody tr:last-child td{border-bottom:0}
+.tablebox td:first-child,.tablebox th:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
+.tablebox tbody tr:hover td{background:var(--soft)}
+.tablebox thead th:first-child{z-index:3}
+.tablebox td.ind{max-width:230px;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:980px){
+  main.scr{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+  #filters{max-height:60vh}
+  .ftog{display:inline-block}
+  .chips{flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding-bottom:6px}.chips button{flex:none;white-space:nowrap}
+  .chiprow{flex-direction:column;align-items:flex-start;gap:6px}
+  .chiprow>.mut{min-width:0}
+  .chiprow>.chips{max-width:100%}
+  .side.shut #filters{display:none}
+  .side.shut .sidehd{padding-bottom:6px}
+  .side{border-bottom:1px solid var(--line)}
+  .out{padding:18px 14px 50px}
+  .tablebox{max-height:none}
+}
+</style>
+</head>
+<body>
+<nav class="topbar">
+  <a class="rb" href="/" title="Desk"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V4M3 16h14M6 12l3-4 3 2 4-5"/></svg><span class="lb">Desk</span></a>
+  <a class="rb" href="/screener" aria-current="page" title="Screener"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h14l-5.5 6.5V16l-3-1.5v-3z"/></svg><span class="lb">Screener</span></a>
+  <a class="rb" href="/breadth" title="Breadth"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V9M8 16V4M13 16v-5M17.5 16H2.5"/></svg><span class="lb">Breadth</span></a>
+  <a class="rb" href="/industries" title="Industries"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/></svg><span class="lb">Industries</span></a>
+  <span class="sp"></span>
+  <button class="rb" id="theme" title="Switch between light and dark"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 11.5A7 7 0 1 1 8.5 3.5a5.5 5.5 0 0 0 8 8z"/></svg><span class="lb">Theme</span></button>
+</nav>
+<main class="scr">
+  <aside class="side">
+    <div class="sidehd"><span>Filters</span><button class="pill ftog" id="ftog" aria-expanded="false">Show filters</button></div>
+    <div id="filters"></div>
+    <div class="sbar">
+      <label class="minv">Min avg daily traded value (₹ Cr) <input type="number" id="minval" value="1" min="0" step="1"></label>
+      <button class="go" id="run">Run screen</button>
+      <button class="pill" id="clear">Clear</button>
+      <button class="pill" id="save" title="Keep these filters under a name; the nightly refresh then tells you which stocks are new">Save screen</button>
+    </div>
+  </aside>
+  <section class="out">
+    <div class="outhd">
+      <div><h1>Screener</h1><p class="sub" id="sub">Loading the market…</p></div>
+      <div class="search"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg><input id="q" type="search" placeholder="Search companies…" autocomplete="off" aria-label="Filter the results by symbol or company name"></div>
+    </div>
+    <div id="warn"></div>
+    <div class="chiprow"><span class="mut">Start from</span><span id="presets" class="chips"></span></div>
+    <div class="chiprow" id="savedRow" hidden><span class="mut">My screens</span><span id="saved" class="chips"></span></div>
+    <div class="result" id="result"></div>
+  </section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const nf0=new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}),nf1=new Intl.NumberFormat('en-IN',{minimumFractionDigits:1,maximumFractionDigits:1}),nf2=new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let LAST=(()=>{try{return localStorage.getItem('setupdesk.scrlast')||''}catch(e){return ''}})();
+let FIELDS=[],rows=[],sort={k:'rs',d:-1},newSet=new Set(),pendingNew=null,SAVED=[];
+try{const o=JSON.parse(localStorage.getItem('setupdesk.scrsort')||'null');if(o&&typeof o.k==='string'&&(o.d===1||o.d===-1))sort=o}catch(e){}      // the sort order comes back as you left it
+try{const t=(JSON.parse(localStorage.getItem('setupdesk.v1')||'{}').theme)||localStorage.getItem('setupdesk.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+$('#theme').onclick=()=>{const d=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=d;try{const o=JSON.parse(localStorage.getItem('setupdesk.v1')||'{}');o.theme=d;localStorage.setItem('setupdesk.v1',JSON.stringify(o));localStorage.setItem('setupdesk.theme',d)}catch(e){}};
+
+function control(f){
+  if(f.type==='choice')return `<select data-k="${f.id}"><option value="">Choose…</option>${Object.entries(f.options).map(([v,l])=>`<option value="${v}">${esc(l)}</option>`).join('')}</select>`;
+  if(f.type==='count')return `<select data-k="${f.id}">${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join('')}</select> of ${f.of}`;
+  if(f.type==='direction')return `<select data-k="${f.id}"><option value="up">Up</option><option value="down">Down</option></select>`;
+  if(f.type==='range')return `<input type="number" data-k="${f.id}" data-r="0" min="${f.min}" max="${f.max}" placeholder="${f.min}"> – <input type="number" data-k="${f.id}" data-r="1" min="${f.min}" max="${f.max}" placeholder="${f.max}">`;
+  if(f.type==='min'||f.type==='max')return `<input type="number" data-k="${f.id}" step="any">${f.unit?` <span class="mut">${f.unit}</span>`:''}`;
+  return '';
+}
+function build(){
+  const groups=[...new Set(FIELDS.map(f=>f.group))];
+  $('#filters').innerHTML=groups.map((g,i)=>`<details class="group"${i===0?' open':''}><summary><span>${esc(g)}</span><span class="cnt" hidden></span></summary><div class="grid">${
+    FIELDS.filter(f=>f.group===g).map(f=>`<div class="f" data-f="${f.id}"><label><input type="checkbox" data-on="${f.id}">${esc(f.label)}</label>${f.help?`<span class="help" title="${esc(f.help)}">?</span>`:''}<span class="ctl">${control(f)}</span></div>`).join('')}</div></details>`).join('');
+  $('#filters').addEventListener('change',e=>{const k=e.target.dataset.on;if(k)e.target.closest('.f').classList.toggle('on',e.target.checked);
+    else{const box=e.target.closest('.f');if(box){const cb=box.querySelector('[data-on]');if(!cb.checked){cb.checked=true;box.classList.add('on')}}}
+    counts()});
+  $('#result').innerHTML=EMPTY;
+}
+const EMPTY='<div class="empty">Pick a starting point, or tick filters on the left, then press <b>Run screen</b>.</div>';
+function counts(open){                                    // how many filters are on in each group; open the groups that have some
+  document.querySelectorAll('#filters .group').forEach(g=>{const n=g.querySelectorAll('.f.on').length,c=g.querySelector('.cnt');c.hidden=!n;c.textContent=n;if(open&&n)g.open=true})
+}
+function collect(){
+  const out={};
+  for(const f of FIELDS){
+    const box=document.querySelector(`.f[data-f="${f.id}"]`);if(!box.querySelector('[data-on]').checked)continue;
+    if(f.type==='flag'){out[f.id]=true;continue}
+    if(f.type==='range'){const [a,b]=[...box.querySelectorAll('input[data-r]')].map(i=>i.value===''?null:Number(i.value));out[f.id]=[a??f.min,b??f.max];continue}
+    const el=box.querySelector('[data-k]');if(el&&el.value!=='')out[f.id]=(f.type==='min'||f.type==='max')?Number(el.value):el.value;
+  }
+  return out;
+}
+const GRADE={Blockbuster:'up',Good:'up',OK:'',Turnaround:'up',Trash:'down'};
+const PRESETS=[
+ {name:'Strong results in an uptrend',set:{grade:'good_plus',stage:'2',rs:[70,99],supertrend:'up'}},
+ {name:'Early turnarounds, price confirming',set:{cycle:'Early',price_ma:'above_ema50',supertrend:'up',rs:[50,99]}},
+ {name:'Quality at a fair price, trending',set:{roce:20,pe:40,profitable:true,price_ma:'above_sma200',ma_order:'sma50_150_200'}},
+ {name:'Tight bases in leaders',set:{stage:'2',rs:[80,99],consol_active:true,consol_range:12}},
+ {name:'VCP setups in leaders',set:{stage:'2',rs:[80,99],vcp:'any'}},
+ {name:'Fresh breakouts from a base',set:{consol_breakout:true,stage:'2',rs:[70,99]}},
+ {name:'Accelerating earnings + RS leaders',set:{earn_momentum:'Accelerating',opm_expanding:true,rs:[80,99],rs_high:true}}];
+function applyPreset(set){
+  $('#clear').click();
+  for(const [id,v] of Object.entries(set)){
+    const f=FIELDS.find(x=>x.id===id),box=document.querySelector(`.f[data-f="${id}"]`);if(!f||!box)continue;
+    const cb=box.querySelector('[data-on]');cb.checked=true;box.classList.add('on');
+    if(f.type==='range'){const i=box.querySelectorAll('input[data-r]');i[0].value=v[0];i[1].value=v[1]}
+    else if(f.type!=='flag'){box.querySelector('[data-k]').value=v}
+  }
+  counts(true);
+  run();
+}
+const STAGE={1:'1 · Basing',2:'2 · Advancing',3:'3 · Topping',4:'4 · Declining'};
+const C={sym:['sym','Symbol'],name:['name','Name'],last:['last','Price',v=>nf2.format(v)],chg:['chg','Chg%',v=>`<span class="${v>=0?'up':'down'}">${v>=0?'+':''}${nf2.format(v)}%</span>`],
+ rs:['rs','RS',v=>nf0.format(v)],stage:['stage','Stage',v=>STAGE[v]||'–'],template:['template','Template',v=>nf0.format(v)+'/5'],
+ supertrend:['supertrend','Supertrend',v=>v==null?'–':`<span class="tag ${v>0?'up':'down'}">${v>0?'Up':'Down'}</span>`],sar:['sar','SAR',v=>v==null?'–':`<span class="tag ${v>0?'up':'down'}">${v>0?'Up':'Down'}</span>`],
+ mansfield:['mansfield','Mansfield',v=>nf1.format(v)+'%'],vs500_55:['vs500_55','vs N500 55d',v=>(v>=0?'+':'')+nf1.format(v)+'%'],momentum:['momentum','Momentum',v=>nf0.format(v)],
+ consol_bars:['consol_bars','Base',v=>v?nf0.format(v)+' bars':'–'],consol_range:['consol_range','Box range',v=>nf1.format(v)+'%'],consol_breakout:['consol_breakout','Breakout',v=>v?'<span class="tag up">Yes</span>':'–'],
+ vcp_status:['vcp_status','VCP',v=>v?`<span class="tag ${v==='breakout'?'up':''}">${esc(v)}</span>`:'–'],vcp_n:['vcp_n','Pullbacks',v=>nf0.format(v)],vcp_last:['vcp_last','Last pullback',v=>nf1.format(v)+'%'],
+ industry:['industry','Industry',v=>v?esc(v):'–'],sector:['sector','Sector',v=>v?esc(v):'–'],ind_3m:['ind_3m','Ind. 3M',v=>(v>=0?'+':'')+nf1.format(v)+'%'],ind_rank_3m:['ind_rank_3m','Ind. rank',v=>'#'+nf0.format(v)],
+ high52_pct:['high52_pct','From 52w high',v=>nf1.format(v)+'%'],value_cr:['value_cr','Traded ₹Cr',v=>nf0.format(v)]};
+const COLGROUPS={trend:['Trend & strength',['template','supertrend','sar','mansfield','vs500_55','momentum','high52_pct']],
+ patterns:['Base & VCP patterns',['consol_bars','consol_range','consol_breakout','vcp_status','vcp_n','vcp_last']],
+ industry:['Industry detail',['sector','ind_3m']],fund:['Quarterly results',null]};
+let colOn={trend:false,patterns:false,industry:false,fund:true};
+try{Object.assign(colOn,JSON.parse(localStorage.getItem('setupdesk.scrcols')||'{}'))}catch(e){}
+const FCOLS=[['grade','Result',v=>`<span class="tag ${GRADE[v]||''}">${esc(v)}</span>`],['sales_yoy','Sales YoY',v=>nf1.format(v)+'%'],
+ ['profit_yoy','Profit YoY',v=>nf1.format(v)+'%'],['opm_ttm','OPM 12m',v=>nf1.format(v)+'%'],['pe','PE',v=>nf1.format(v)+'x'],['pb','P/B',v=>nf1.format(v)+'x'],['gnpa_pct','GNPA',v=>nf2.format(v)+'%'],['pledge_pct','Pledge',v=>nf1.format(v)+'%'],['insider_net','Insider ₹Cr',v=>(v>=0?'+':'')+nf2.format(v)],['roce','ROCE',v=>nf1.format(v)+'%']];
+let fundUsed=false;
+function buildCols(){
+  const c=[C.sym,C.name,C.last,C.chg];
+  if(fundUsed&&colOn.fund)c.push(...FCOLS);
+  c.push(C.rs,C.stage,C.industry,C.ind_rank_3m);
+  for(const g of ['trend','patterns','industry'])if(colOn[g])c.push(...COLGROUPS[g][1].map(k=>C[k]));
+  c.push(C.value_cr);return c;
+}
+let cols=buildCols();
+function draw(){
+  const q=($('#q').value||'').trim().toLowerCase();
+  const so=cols.some(c=>c[0]===sort.k)?sort:{k:'rs',d:-1};      // a sort column that is not shown (a hidden column group) falls back to RS
+  const r=rows.filter(x=>!q||x.sym.toLowerCase().includes(q)||String(x.name||'').toLowerCase().includes(q)).sort((a,b)=>{const x=a[so.k],y=b[so.k];return (x==null)-(y==null)||(x>y?1:x<y?-1:0)*so.d});
+  $('#result tbody').innerHTML=r.map(x=>`<tr>${cols.map(([k,,fm])=>{const v=x[k];
+    if(k==='sym')return `<td class="sym"><a href="/?s=${encodeURIComponent(v)}" title="Open ${esc(v)} on the Desk" style="color:var(--ink);text-decoration:none"><b>${esc(v)}</b></a>${newSet.has(v)?' <span class="tag up" title="Matched today, not on the previous session">NEW</span>':''}${x.is_fin?' <span class="tag" title="Bank, lender or insurer: sales = net interest income (or revenue); no margin or ROCE">Fin</span>':''}</td>`;
+    if(k==='profit_yoy'&&v==null&&x.grade)return `<td class="mut">${x.profit_state==='loss_to_profit'?'Loss → profit':'Loss'}</td>`;
+    if(k==='grade'&&v!=null)return `<td>${fm(v)}${x.checked==='u'?' <sup title="Yahoo Finance figure: no company filing has confirmed this quarter yet" style="color:var(--amber);cursor:help;font-weight:600">†</sup>':''}</td>`;
+    if(k==='name')return `<td class="mut">${esc(v)}</td>`;if(k==='industry')return `<td class="ind mut" title="${esc(v)}">${v==null?'–':esc(v)}</td>`;return `<td>${v==null?'–':fm(v)}</td>`}).join('')}</tr>`).join('');
+  document.querySelectorAll('#result thead th').forEach(th=>{th.removeAttribute('aria-sort');if(th.dataset.k===so.k)th.setAttribute('aria-sort',so.d>0?'ascending':'descending')});
+}
+/* the filters you ticked are kept, and come back the next time the page opens */
+const FKEY='setupdesk.scrfilters';
+function saveFilters(){try{localStorage.setItem(FKEY,JSON.stringify({filters:collect(),minval:Number($('#minval').value)||0}))}catch(e){}}
+async function run(){
+  saveFilters();
+  newSet=pendingNew||new Set();pendingNew=null;
+  const filters=collect();if(!Object.keys(filters).length&&!Number($('#minval').value)){$('#result').innerHTML=EMPTY}$('#run').disabled=true;$('#run').textContent='Running…';
+  try{
+    const res=await fetch('/api/screener/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters,min_value_cr:Number($('#minval').value)||0,limit:1000})});
+    if(!res.ok)throw new Error((await res.json()).detail||res.status);
+    const d=await res.json();rows=d.rows;
+    // the Desk's "Screener" list is whatever the last run returned
+    try{localStorage.setItem('setupdesk.screen',JSON.stringify({syms:d.rows.map(r=>r.sym),n:d.matched,at:new Date().toISOString()}))}catch(e){}fundUsed=!!d.fundamentals.used;cols=buildCols();
+    const fun=d.funnel.map((st,i,a)=>`<span class="st${i===a.length-1?' last':''}"><b>${nf0.format(st.n)}</b> <span class="mut">${esc(st.label)}</span></span>`).join('<span class="ar">→</span>');
+    $('#result').innerHTML=`<div class="funnel">${fun}</div><div class="head"><div><b>${nf0.format(d.matched)}</b> of ${nf0.format(d.fundamentals.used?d.fundamentals.covered:d.universe)} stocks match${d.matched>d.rows.length?` · showing the top ${d.rows.length} by RS`:''}</div><div class="r"><span class="note">Prices as of ${esc(d.asof)}.${d.rows.some(r=>r.checked==='u')?' <span style="color:var(--amber);font-weight:600">†</span> Yahoo figure, no filing has confirmed that quarter yet.':''}</span><div class="colmenu"><button class="pill" id="colBtn">Columns ▾</button><div class="colpop" id="colPop" hidden>${Object.entries(COLGROUPS).filter(([k])=>k!=='fund'||fundUsed).map(([k,[l]])=>`<label><input type="checkbox" data-cg="${k}"${colOn[k]?' checked':''}>${esc(l)}</label>`).join('')}</div></div>${d.rows.length?`<a class="go" href="/?list=screener" style="text-decoration:none">Open these ${nf0.format(d.rows.length)} on the Desk →</a>`:''}</div></div>
+      <div class="card tablebox"><table><thead><tr>${cols.map(([k,l])=>`<th data-k="${k}">${l}</th>`).join('')}</tr></thead><tbody></tbody></table></div>`;
+    document.querySelector('#result thead').onclick=e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;sort={k,d:sort.k===k?-sort.d:(k==='sym'||k==='name'?1:-1)};try{localStorage.setItem('setupdesk.scrsort',JSON.stringify(sort))}catch(_){}draw()};
+    draw();
+  }catch(e){$('#result').innerHTML=`<div class="warn">Could not run the screen: ${esc(e.message)}</div>`}
+  $('#run').disabled=false;$('#run').textContent='Run screen';
+}
+const narrow=()=>matchMedia('(max-width:980px)').matches;
+function setFilters(open){const sd=document.querySelector('.side');sd.classList.toggle('shut',!open);$('#ftog').textContent=open?'Hide filters':'Show filters';$('#ftog').setAttribute('aria-expanded',open)}
+$('#ftog').onclick=()=>setFilters(document.querySelector('.side').classList.contains('shut'));
+if(narrow())setFilters(false);
+$('#run').addEventListener('click',()=>{if(narrow()){setFilters(false);setTimeout(()=>$('.out').scrollIntoView({behavior:'smooth'}),50)}});
+$('#run').onclick=run;
+$('#q').oninput=()=>{if(rows.length&&$('#result tbody'))draw()};
+$('#result').addEventListener('click',e=>{
+  if(e.target.closest('#colBtn')){const p=$('#colPop');p.hidden=!p.hidden;return}
+  const cb=e.target.closest('[data-cg]');
+  if(cb){colOn[cb.dataset.cg]=cb.checked;try{localStorage.setItem('setupdesk.scrcols',JSON.stringify(colOn))}catch(_){}
+    cols=buildCols();const tb=$('#result thead');tb.innerHTML='<tr>'+cols.map(([k,l])=>`<th data-k="${k}">${l}</th>`).join('')+'</tr>';draw()}
+});
+document.addEventListener('click',e=>{const p=$('#colPop');if(p&&!p.hidden&&!e.target.closest('.colmenu'))p.hidden=true});
+/* saved screens: keep a set of filters under a name; the nightly run records who matched, so each chip shows what is new */
+async function loadSaved(){
+  try{SAVED=await (await fetch('/api/screens')).json()}catch(e){SAVED=[]}
+  $('#savedRow').hidden=!SAVED.length;
+  $('#saved').innerHTML=SAVED.map(s=>`<span class="sv${String(s.id)===LAST?' act':''}" data-id="${s.id}"><button data-open="${s.id}" title="Open this screen${s.new_since?` (compared with ${esc(s.new_since)})`:''}">${esc(s.name)}<span class="n">${s.count}</span>${s.new.length?`<span class="new">+${s.new.length} new</span>`:''}</button><button class="x" data-del="${s.id}" title="Delete this screen">×</button></span>`).join('');
+}
+$('#saved').onclick=async e=>{
+  const o=e.target.closest('[data-open]'),x=e.target.closest('[data-del]');
+  if(o){const s=SAVED.find(v=>v.id==o.dataset.open);if(!s)return;try{localStorage.setItem('setupdesk.scrlast',String(s.id))}catch(_){}LAST=String(s.id);
+    try{const r=await fetch('/api/screens/'+s.id+'/refresh',{method:'POST'});if(r.ok){const f=await r.json();Object.assign(s,f)}}catch(_){}
+    $('#minval').value=s.min_value_cr||0;pendingNew=new Set(s.new);applyPreset(s.filters);loadSaved()}
+  else if(x){const s=SAVED.find(v=>v.id==x.dataset.del);if(s&&confirm('Delete the saved screen "'+s.name+'"?')){await fetch('/api/screens/'+s.id,{method:'DELETE'});loadSaved()}}
+};
+$('#save').onclick=async()=>{
+  const filters=collect();if(!Object.keys(filters).length){alert('Tick at least one filter first.');return}
+  const name=prompt('Name for this screen');if(!name||!name.trim())return;
+  const r=await fetch('/api/screens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,filters,min_value_cr:Number($('#minval').value)||0})});
+  if(!r.ok){alert('Could not save: '+((await r.json()).detail||r.status));return}
+  loadSaved();
+};
+$('#clear').onclick=()=>{try{localStorage.removeItem(FKEY)}catch(e){}document.querySelectorAll('#filters [data-on]').forEach(c=>{c.checked=false;c.closest('.f').classList.remove('on')});document.querySelectorAll('#filters [data-k]').forEach(i=>{if(i.tagName==='INPUT')i.value='';else if(i.querySelector('option[value=""]'))i.value=''});$('#result').innerHTML=EMPTY;counts()};
+(async()=>{
+  FIELDS=await (await fetch('/api/screener/fields')).json();build();
+  loadSaved();
+  $('#filters').addEventListener('change',()=>setTimeout(saveFilters,0));$('#filters').addEventListener('input',()=>setTimeout(saveFilters,0));$('#minval').addEventListener('change',saveFilters);
+  $('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${esc(p.name)}</button>`).join('');
+  $('#presets').onclick=e=>{const b=e.target.closest('button[data-p]');if(b){LAST='';try{localStorage.removeItem('setupdesk.scrlast')}catch(_){}applyPreset(PRESETS[+b.dataset.p].set);loadSaved()}};
+  {const pi=new URLSearchParams(location.search).get('preset');
+   if(pi!=null&&PRESETS[+pi])applyPreset(PRESETS[+pi].set);
+   else{try{const o=JSON.parse(localStorage.getItem(FKEY)||'null');
+     if(o&&(Object.keys(o.filters||{}).length||o.minval)){if(Number.isFinite(o.minval))$('#minval').value=o.minval;if(Object.keys(o.filters||{}).length)applyPreset(o.filters);else run()}}catch(e){}}}
+  try{const c=await (await fetch('/api/screener/coverage')).json();
+    document.querySelector('.f[data-f="grade"]').closest('.group').querySelector('summary').insertAdjacentHTML('afterend',`<p class="note">Quarterly results are checked for <b>${c.fundamentals}</b> of ${nf0.format(c.technical)} stocks, so turning on any filter below limits the search to those ${c.fundamentals}. ${c.stale?`${c.stale} more have only older results and are left out.`:''}</p>`)}catch(e){}
+  try{const b=await (await fetch('/api/breadth')).json();$('#sub').textContent=`Every NSE stock · data to ${b.dates[b.dates.length-1]}`}catch(e){$('#sub').textContent='Price-based filters across every NSE stock'}
+})();
+
+fetch('/api/status').then(r=>r.json()).then(s=>{
+  if(s.never_run)return;
+  const m=[...(s.warnings||[])];
+  if(s.exit_code===2)m.unshift('The last nightly refresh failed, so this is data from an earlier run.');
+  if(s.age_hours>60)m.unshift('The last refresh finished '+Math.round(s.age_hours/24)+' days ago.');
+  if(m.length)document.querySelector('#warn').insertAdjacentHTML('beforeend','<div class="warn"><b>Data check:</b> '+m.map(x=>String(x).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))).join(' &middot; ')+'</div>');
+}).catch(()=>{});
+</script>
+</body>
+</html>

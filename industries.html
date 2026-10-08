@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Setup Desk Industries</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f4fe0'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
+<style>
+main.ind{max-width:1100px}
+.indh{display:flex;align-items:baseline;gap:26px;border-bottom:1px solid var(--line);margin:0 0 16px}
+.indh h1{margin:0 0 -1px;font-size:26px}
+.tabs2{display:flex;gap:4px}
+.tabs2 button{border:0;background:none;padding:10px 14px;color:var(--muted);font-size:15px;border-bottom:2px solid transparent;cursor:pointer}
+.tabs2 button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.ctlrow{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.segc{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+.segc button{border:0;background:none;padding:7px 14px;color:var(--muted);cursor:pointer;font-size:14px}
+.segc button[aria-pressed=true]{background:var(--accent);color:#fff}
+.fchip{position:relative}
+.fchip>button{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 14px;color:var(--ink);cursor:pointer}
+.fpop{position:absolute;left:0;top:44px;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 34px rgba(0,0,0,.2);padding:14px;min-width:260px}
+.fpop[hidden]{display:none}
+.fpop label{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0}
+.fpop select{border:1px solid var(--line);border-radius:7px;background:var(--panel);padding:4px 8px;color:var(--ink)}
+.livetag{margin:0 0 12px;color:var(--muted)}.livetag b{color:var(--up);font-weight:600}
+.trk{border:1px solid var(--line);border-radius:12px;background:var(--panel);max-height:calc(100vh - 260px);min-height:300px;overflow:auto;padding:6px 0}
+.trow{display:grid;grid-template-columns:minmax(200px,1.5fr) minmax(180px,1fr) 74px;align-items:center;gap:26px;padding:0 16px 0 14px;height:29px;border-left:3px solid transparent;cursor:pointer}
+.trow:hover{background:var(--soft)}
+.trow.sel{background:color-mix(in srgb,var(--accent) 11%,var(--panel));border-left-color:var(--accent)}
+.trow.sel .nm span:first-child{font-weight:600}
+.trow .nm{display:flex;gap:8px;align-items:baseline;min-width:0}
+.trow .nm span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px}
+.trow .nm small{color:var(--muted);font-size:11.5px}
+.bar{position:relative;height:14px;border-radius:2px;background:color-mix(in srgb,var(--soft) 70%,var(--panel))}
+.bar i{position:absolute;top:0;bottom:0;border-radius:2px;min-width:1px}
+.bar i.g{background:color-mix(in srgb,var(--up) 72%,var(--panel))}.bar i.r{background:color-mix(in srgb,var(--down) 80%,var(--panel))}
+.trow .v{text-align:right;font-weight:500;font-size:13.5px}
+.empty2{padding:40px;text-align:center;color:var(--muted)}
+.drawer{margin-top:16px;position:static}}
+.drawer{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+.drawer .dh{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.drawer .dh b{font-size:16px}
+.drawer .scrollx{max-height:420px;overflow:auto}
+.dt th,.dt td{padding:6px 12px;text-align:right;white-space:nowrap}
+.dt th:first-child,.dt td:first-child,.dt th:nth-child(2),.dt td:nth-child(2){text-align:left}
+.dt thead th{position:sticky;top:0;background:var(--panel)}
+.heat{border-radius:4px}
+.tbl{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:auto;max-height:calc(100vh - 250px)}
+.tbl table{width:100%;border-collapse:collapse}
+.tbl th,.tbl td{padding:8px 12px;text-align:right;white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl thead th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:500;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.tbl thead th[aria-sort]{color:var(--ink)}
+.tbl tbody tr{border-bottom:1px solid var(--line);cursor:pointer}.tbl tbody tr:hover{background:var(--soft)}
+@media (max-width:760px){.trow{grid-template-columns:1fr auto;height:auto;padding:10px 14px 9px;gap:6px 10px}.trow .nm{grid-column:1;grid-row:1}.trow .v{grid-column:2;grid-row:1}.trow .bar{display:block;grid-column:1/3;grid-row:2;height:8px}.bar i{top:0;bottom:0}.trk{max-height:none}.segc{max-width:100%;overflow-x:auto}.segc button{white-space:nowrap;padding:8px 12px}}
+/* look */
+.indh h1{font-size:24px;font-weight:600}
+.segc{border-radius:10px}
+.segc button{padding:8px 15px}
+.fchip>button{border-radius:10px;padding:8px 15px}
+.trk,.tbl,.drawer{border-radius:14px}
+.trow{transition:background-color .12s}
+.tbl thead th,.dt thead th{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.tbl td,.tbl th{padding:10px 14px}
+.livetag{display:block;width:fit-content;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px 14px;font-size:13px}
+.livetag[hidden]{display:none}
+.trow.skel-row{cursor:default}.trow.skel-row .skel{height:14px}.trow.skel-row .bar{background:none}
+</style>
+</head>
+<body>
+<nav class="topbar">
+  <a class="rb" href="/" title="Desk"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V4M3 16h14M6 12l3-4 3 2 4-5"/></svg><span class="lb">Desk</span></a>
+  <a class="rb" href="/screener" title="Screener"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h14l-5.5 6.5V16l-3-1.5v-3z"/></svg><span class="lb">Screener</span></a>
+  <a class="rb" href="/breadth" title="Breadth"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V9M8 16V4M13 16v-5M17.5 16H2.5"/></svg><span class="lb">Breadth</span></a>
+  <a class="rb" href="/industries" aria-current="page" title="Industries"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/></svg><span class="lb">Industries</span></a>
+  <span class="sp"></span>
+  <button class="rb" id="theme" title="Switch between light and dark"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 11.5A7 7 0 1 1 8.5 3.5a5.5 5.5 0 0 0 8 8z"/></svg><span class="lb">Theme</span></button>
+</nav>
+<main class="ind">
+  <div class="indh"><h1>Industries</h1>
+    <div class="tabs2" id="tabs"><button data-t="trk" aria-selected="true">Tracker</button><button data-t="tbl" aria-selected="false">Table</button></div></div>
+  <div id="warn"></div>
+  <div class="ctlrow">
+    <div class="segc" id="rng"><button data-r="today" aria-pressed="false">Today</button><button data-r="1w" aria-pressed="true">1W</button><button data-r="1m" aria-pressed="false">1M</button><button data-r="3m" aria-pressed="false">3M</button><button data-r="6m" aria-pressed="false">6M</button><button data-r="ytd" aria-pressed="false">YTD</button><button data-r="1y" aria-pressed="false">1Y</button></div>
+    <div class="segc" id="lvl"><button data-l="theme" aria-pressed="false">Themes</button><button data-l="macro" aria-pressed="false">Macro</button><button data-l="sector" aria-pressed="false">Sector</button><button data-l="industry" aria-pressed="true">Industry</button><button data-l="basic" aria-pressed="false">Sub-industry</button></div>
+    <button class="ghost" id="thBtn" hidden style="height:36px">Edit themes</button>
+    <div class="fchip"><button id="fbtn">⚙ <span id="ftxt">₹500 Cr+ · 3+ stocks</span></button>
+      <div class="fpop" id="fpop" hidden>
+        <label>Smallest market cap <select id="fcap"><option value="0">Any</option><option value="100">₹100 Cr</option><option value="500" selected>₹500 Cr</option><option value="1000">₹1,000 Cr</option><option value="5000">₹5,000 Cr</option></select></label>
+        <label>Fewest stocks in a group <select id="fn"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select></label>
+        <label>Group return is the <select id="fagg"><option value="mean" selected>Average</option><option value="median">Median</option><option value="mcap">Market-cap weighted</option></select></label>
+      </div></div>
+  </div>
+  <p class="livetag" id="live" hidden></p>
+  <div class="drawer" id="thEd" hidden style="margin:0 0 14px"><div class="dh"><div><b>Themes</b> <span class="mut">· one entry per theme; add NSE group names (<code>basic</code>, <code>industry</code>, <code>sector</code>, <code>macro</code>) and/or <code>symbols</code>; <code>exclude</code> removes stocks</span></div><div><button class="ghost" id="thSave">Save themes</button> <button class="ghost" id="thClose">Close</button></div></div>
+    <textarea id="thTxt" spellcheck="false" style="width:100%;height:260px;border:0;padding:12px 16px;background:var(--panel);color:var(--ink);font:12.5px/1.5 ui-monospace,Consolas,monospace;resize:vertical"></textarea><div id="thMsg" class="mut" style="padding:6px 16px 10px"></div></div>
+  <div class="split" id="split"><div id="view"><div class="trk"><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div><div class="trow skel-row"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div></div>
+  <div class="drawer" id="drawer" hidden></div></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const nf0=new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}),nf1=new Intl.NumberFormat('en-IN',{minimumFractionDigits:1,maximumFractionDigits:1}),nf2=new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+try{const t=(JSON.parse(localStorage.getItem('setupdesk.v1')||'{}').theme)||localStorage.getItem('setupdesk.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+$('#theme').onclick=()=>{const d=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=d;try{const o=JSON.parse(localStorage.getItem('setupdesk.v1')||'{}');o.theme=d;localStorage.setItem('setupdesk.v1',JSON.stringify(o));localStorage.setItem('setupdesk.theme',d)}catch(e){}};
+const RNG={today:'Today','1w':'1W','1m':'1M','3m':'3M','6m':'6M',ytd:'YTD','1y':'1Y'};
+const S={tab:'trk',rng:'1w',lvl:'industry',cap:500,n:3,agg:'mean',D:null,sel:null,sort:{k:'1w',d:-1}};
+try{Object.assign(S,JSON.parse(localStorage.getItem('setupdesk.ind')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('setupdesk.ind',JSON.stringify({tab:S.tab,rng:S.rng,lvl:S.lvl,cap:S.cap,n:S.n,agg:S.agg}))}catch(e){}};
+const pct=v=>v==null?'–':(v>=0?'+':'−')+nf2.format(Math.abs(v))+'%';
+const cls=v=>v==null?'':v>=0?'up':'down';
+function syncCtl(){
+  document.querySelectorAll('#rng button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===S.rng));
+  document.querySelectorAll('#lvl button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===S.lvl));
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===S.tab));
+  $('#fcap').value=S.cap;$('#fn').value=S.n;$('#fagg').value=S.agg;
+  $('#thBtn').hidden=S.lvl!=='theme';
+  $('#ftxt').textContent=(S.cap?`₹${nf0.format(S.cap)} Cr+`:'Any size')+` · ${S.n}+ stock${S.n>1?'s':''}`+(S.agg==='mean'?'':S.agg==='median'?' · median':' · cap-weighted');
+}
+async function load(){
+  syncCtl();
+  try{
+    const r=await fetch(`/api/industries?level=${S.lvl}&min_mcap=${S.cap}&min_n=${S.n}&agg=${S.agg}`);if(!r.ok)throw new Error((await r.json()).detail||r.status);S.D=await r.json();
+  }catch(e){$('#view').innerHTML=`<div class="warn">Could not load industries: ${esc(e.message)}. If this is the first time, run <code>python -m backend.classify</code> to fetch the industry list.</div>`;return}
+  const L=S.D.live,el=$('#live');
+  el.hidden=false;el.innerHTML=L?`<b>● Live</b> as of ${L.asof.slice(11,16)} IST · prices about 15 minutes late · ${S.D.stocks==null?'':nf0.format(S.D.stocks)+' stocks of '}₹${nf0.format(S.cap)} Cr and above · ${S.D.rows.length} groups`:`Prices to ${S.D.asof} (end of day) · ${S.D.stocks==null?'':nf0.format(S.D.stocks)+' stocks of '}₹${nf0.format(S.cap)} Cr and above · ${S.D.rows.length} groups`;
+  draw();
+}
+function draw(){
+  if(!S.D)return;
+  $('#split').dataset.tab=S.tab;
+  if(S.tab==='trk')drawTracker();else drawTable();
+}
+function drawTracker(){
+  const k=S.rng,rows=S.D.rows.filter(r=>r[k]!=null).sort((a,b)=>b[k]-a[k]);
+  if(!rows.length){$('#view').innerHTML='<div class="trk"><div class="empty2">No groups match these filters.'+(S.lvl==='theme'?' Themes are defined in data/themes.json.':'')+'</div></div>';return}
+  const mx=Math.max(...rows.map(r=>Math.abs(r[k])))||1;
+  $('#view').innerHTML=`<div class="trk">${rows.map(r=>{const w=Math.abs(r[k])/mx*50;
+    return `<div class="trow${S.sel===r.name?' sel':''}" data-n="${esc(r.name)}"><div class="nm"><span title="${esc(r.name)}">${esc(r.name)}</span><small>${r.n}</small></div>
+    <div class="bar"><i class="${r[k]>=0?'g':'r'}" style="${r[k]>=0?`left:50%;width:${w}%`:`right:50%;width:${w}%`}"></i></div><div class="v ${cls(r[k])}">${pct(r[k])}</div></div>`}).join('')}</div>`;
+}
+const heat=v=>{if(v==null)return '';const a=Math.min(.55,Math.abs(v)/25);return `background:color-mix(in srgb,var(${v>=0?'--up':'--down'}) ${Math.round(a*100)}%,transparent)`};
+function drawTable(){
+  const cols=[['n','Stocks'],['today','Today'],['1w','1W'],['1m','1M'],['3m','3M'],['6m','6M'],['ytd','YTD'],['1y','1Y'],['above50','Above 50-day'],['rs','Avg RS']];
+  const {k,d}=S.sort;
+  const sorted=[...S.D.rows].sort((a,b)=>k==='name'?-d*String(a.name).localeCompare(String(b.name)):d*((a[k]??-1e9)-(b[k]??-1e9)));
+  $('#view').innerHTML=`<div class="tbl"><table><thead><tr><th data-k="name"${k==='name'?` aria-sort="${d>0?'ascending':'descending'}"`:''}>${S.D.level_name}</th>${cols.map(([c,l])=>`<th data-k="${c}"${k===c?` aria-sort="${d>0?'ascending':'descending'}"`:''}>${l}</th>`).join('')}</tr></thead><tbody>${sorted.map(r=>`<tr data-n="${esc(r.name)}"><td>${esc(r.name)}</td><td>${r.n}</td>${['today','1w','1m','3m','6m','ytd','1y'].map(c=>`<td style="${heat(r[c])}" class="${cls(r[c])}">${pct(r[c])}</td>`).join('')}<td>${r.above50==null?'–':nf0.format(r.above50)+'%'}</td><td>${r.rs==null?'–':nf0.format(r.rs)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+async function openGroup(name){
+  S.sel=name;draw();const dr=$('#drawer');dr.hidden=false;dr.innerHTML='<div class="empty2">Loading…</div>';
+  const r=await fetch(`/api/industries/members?level=${S.lvl}&name=${encodeURIComponent(name)}&min_mcap=${S.cap}`);const D=await r.json();
+  const rows=D.rows.sort((a,b)=>(b[S.rng]??-1e9)-(a[S.rng]??-1e9));
+  dr.innerHTML=`<div class="dh"><div><b>${esc(name)}</b> <span class="mut">· ${rows.length} stocks · ${RNG[S.rng]} ${pct(S.D.rows.find(x=>x.name===name)?.[S.rng])}</span></div>
+    <div><a class="ghost" style="text-decoration:none" id="toDesk" href="/?list=screener">Open these on the Desk →</a></div></div>
+    <div class="scrollx"><table class="dt"><thead><tr><th>Symbol</th><th>Name</th><th>Mkt cap ₹Cr</th><th>Today</th><th>1W</th><th>1M</th><th>3M</th><th>6M</th><th>YTD</th><th>1Y</th><th>RS</th></tr></thead><tbody>${rows.map(r=>`<tr><td><a href="/?s=${encodeURIComponent(r.sym)}" style="color:var(--accent);text-decoration:none"><b>${esc(r.sym)}</b></a></td><td class="mut">${esc(r.name||'')}</td><td>${r.mcap==null?'–':nf0.format(r.mcap)}</td>${['today','1w','1m','3m','6m','ytd','1y'].map(c=>`<td class="${cls(r[c])}" style="${c===S.rng?'font-weight:600':''}">${pct(r[c])}</td>`).join('')}<td>${r.rs==null?'–':nf0.format(r.rs)}</td></tr>`).join('')}</tbody></table></div>`;
+  $('#toDesk').onclick=()=>{try{localStorage.setItem('setupdesk.screen',JSON.stringify({syms:rows.map(r=>r.sym),n:rows.length,at:new Date().toISOString()}))}catch(e){}};
+  dr.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+document.addEventListener('click',e=>{
+  const row=e.target.closest('.trow,.tbl tbody tr');if(row&&row.dataset.n){openGroup(row.dataset.n);return}
+  const th=e.target.closest('.tbl thead th');if(th){const k=th.dataset.k;S.sort={k,d:S.sort.k===k?-S.sort.d:(k==='name'?1:-1)};drawTable();return}
+  if(!e.target.closest('.fchip'))$('#fpop').hidden=true;
+});
+$('#rng').onclick=e=>{const b=e.target.closest('button');if(b){S.rng=b.dataset.r;S.sort={k:S.rng,d:-1};save();syncCtl();draw();if(S.sel)openGroup(S.sel)}};
+$('#lvl').onclick=e=>{const b=e.target.closest('button');if(b){S.lvl=b.dataset.l;S.sel=null;$('#drawer').hidden=true;save();load()}};
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(b){S.tab=b.dataset.t;save();syncCtl();draw()}};
+$('#fbtn').onclick=()=>{$('#fpop').hidden=!$('#fpop').hidden};
+for(const [id,key,num] of [['fcap','cap',1],['fn','n',1],['fagg','agg',0]])$('#'+id).onchange=e=>{S[key]=num?+e.target.value:e.target.value;save();load()};
+$('#thBtn').onclick=async()=>{const ed=$('#thEd');ed.hidden=!ed.hidden;if(!ed.hidden){$('#thTxt').value=JSON.stringify(await (await fetch('/api/themes')).json(),null,2);$('#thMsg').textContent=''}};
+$('#thClose').onclick=()=>{$('#thEd').hidden=true};
+$('#thSave').onclick=async()=>{let j;try{j=JSON.parse($('#thTxt').value)}catch(e){$('#thMsg').textContent='That is not valid JSON: '+e.message;return}
+  const r=await fetch('/api/themes',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(j)});
+  if(!r.ok){$('#thMsg').textContent=(await r.json()).detail||'Could not save';return}
+  $('#thMsg').textContent='Saved.';load()};
+const Q=new URLSearchParams(location.search);
+if(Q.get('level')&&['macro','sector','industry','basic','theme'].includes(Q.get('level'))){S.lvl=Q.get('level');S.tab='trk'}
+load().then(()=>{if(Q.get('open')&&S.D&&S.D.rows.some(r=>r.name===Q.get('open')))openGroup(Q.get('open'))});
+setInterval(()=>{if(!document.hidden)load()},5*60*1000);
+</script>
+</body>
+</html>

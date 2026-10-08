@@ -1,0 +1,493 @@
+{
+  "Defence": {
+    "basic": [
+      "Aerospace & Defense"
+    ],
+    "symbols": [
+      "BEML",
+      "SOLARINDS",
+      "BHARATFORG",
+      "MAZDOCK",
+      "COCHINSHIP",
+      "SWANDEF",
+      "HBLENGINE",
+      "PREMEXPLN",
+      "MTARTECH"
+    ]
+  },
+  "Wires & Cables": {
+    "basic": [
+      "Cables - Electricals"
+    ],
+    "symbols": [
+      "APARINDS",
+      "DIACABS",
+      "STLTECH"
+    ]
+  },
+  "Jewellery & Gold": {
+    "basic": [
+      "Gems, Jewellery And Watches",
+      "Precious Metals"
+    ],
+    "symbols": [
+      "MUTHOOTFIN",
+      "MANAPPURAM"
+    ]
+  },
+  "Sugar & Ethanol": {
+    "basic": [
+      "Sugar"
+    ]
+  },
+  "Private Banks": {
+    "basic": [
+      "Private Sector Bank"
+    ]
+  },
+  "PSU Banks": {
+    "basic": [
+      "Public Sector Bank"
+    ]
+  },
+  "Hospitals & Diagnostics": {
+    "basic": [
+      "Hospital",
+      "Healthcare Service Provider"
+    ]
+  },
+  "Shipbuilding & Maritime": {
+    "basic": [
+      "Ship Building & Allied Services",
+      "Shipping",
+      "Port & Port services",
+      "Dredging"
+    ],
+    "symbols": [
+      "GRSE"
+    ]
+  },
+  "Power T&D": {
+    "basic": [
+      "Power - Transmission",
+      "Power Distribution"
+    ],
+    "symbols": [
+      "GVT&D",
+      "POWERINDIA",
+      "ENRIN",
+      "SIEMENS",
+      "KARAMTARA",
+      "TARIL",
+      "VOLTAMP",
+      "INDOTECH",
+      "TRANSRAILL",
+      "KEC",
+      "KPIL",
+      "SKIPPER",
+      "BBL"
+    ]
+  },
+  "Railways": {
+    "basic": [
+      "Railway Wagons"
+    ],
+    "symbols": [
+      "RVNL",
+      "IRCON",
+      "RITES",
+      "RAILTEL",
+      "KERNEX",
+      "IRCTC",
+      "IRFC",
+      "BEML",
+      "HBLENGINE",
+      "CEMPRO"
+    ]
+  },
+  "Travel & Hospitality": {
+    "basic": [
+      "Hotels & Resorts",
+      "Tour, Travel Related Services",
+      "Airline",
+      "Airport & Airport services"
+    ]
+  },
+  "QSR & Restaurants": {
+    "basic": [
+      "Restaurants"
+    ]
+  },
+  "Water & Sanitation": {
+    "basic": [
+      "Water Supply & Management",
+      "Sanitary Ware"
+    ]
+  },
+  "Building Materials": {
+    "basic": [
+      "Cement & Cement Products",
+      "Ceramics",
+      "Sanitary Ware",
+      "Plywood Boards/ Laminates",
+      "Granites & Marbles",
+      "Other Construction Materials"
+    ]
+  },
+  "Internet & New-Age Tech": {
+    "basic": [
+      "E-Retail/ E-Commerce",
+      "Internet & Catalogue Retail",
+      "Web based media and service",
+      "Financial Technology (Fintech)",
+      "E-Learning"
+    ]
+  },
+  "Fertilisers & Agrochemicals": {
+    "industry": [
+      "Fertilizers & Agrochemicals"
+    ]
+  },
+  "Telecom": {
+    "macro": [
+      "Telecommunication"
+    ]
+  },
+  "Data Centres & Cloud": {
+    "symbols": [
+      "NETWEB",
+      "E2E",
+      "ANANTRAJ",
+      "TECHNOE",
+      "TATACOMM",
+      "RAILTEL",
+      "BBOX",
+      "DSSL",
+      "ADSL"
+    ]
+  },
+  "EMS / Electronics Manufacturing": {
+    "symbols": [
+      "DIXON",
+      "KAYNES",
+      "SYRMA",
+      "CYIENTDLM",
+      "AVALON",
+      "PGEL",
+      "AMBER",
+      "CENTUM",
+      "OPTIEMUS",
+      "EPACK"
+    ]
+  },
+  "Semiconductors & Chip Design": {
+    "symbols": [
+      "MOSCHIP",
+      "KAYNES",
+      "SYRMA",
+      "CYIENTDLM",
+      "TATAELXSI",
+      "SASKEN",
+      "CYIENT"
+    ]
+  },
+  "Nuclear Power": {
+    "symbols": [
+      "BHEL",
+      "LT",
+      "MTARTECH",
+      "WALCHANNAG",
+      "HCC",
+      "NTPC",
+      "TATAPOWER",
+      "ADANIPOWER",
+      "GVPIL",
+      "POWERMECH"
+    ]
+  },
+  "Renewable Energy": {
+    "symbols": [
+      "ADANIGREEN",
+      "NTPCGREEN",
+      "ACMESOLAR",
+      "JSWENERGY",
+      "KPIGREEN",
+      "SJVN",
+      "NHPC",
+      "JNPR",
+      "CLEANMAX",
+      "SUZLON",
+      "INOXWIND",
+      "INOXGREEN",
+      "WAAREEENER",
+      "PREMIERENE",
+      "IREDA",
+      "SWSOLAR",
+      "VIKRAMSOLR",
+      "EMMVEE",
+      "SAATVIKGL",
+      "WAAREERTL",
+      "INA",
+      "WEBELSOLAR",
+      "BORORENEW",
+      "GREENPOWER",
+      "KPEL",
+      "SWELECTES",
+      "SOLARWORLD"
+    ]
+  },
+  "Solar": {
+    "symbols": [
+      "WAAREEENER",
+      "PREMIERENE",
+      "VIKRAMSOLR",
+      "EMMVEE",
+      "SAATVIKGL",
+      "WAAREERTL",
+      "INA",
+      "WEBELSOLAR",
+      "BORORENEW",
+      "SWSOLAR",
+      "ACMESOLAR",
+      "SWELECTES",
+      "SOLARWORLD"
+    ]
+  },
+  "EV & Batteries": {
+    "symbols": [
+      "EXIDEIND",
+      "ARE&M",
+      "OLAELEC",
+      "ATHERENERG",
+      "TVSMOTOR",
+      "OLECTRA",
+      "JBMA",
+      "UNOMINDA",
+      "SONACOMS",
+      "TMPV",
+      "GRAVITA",
+      "HSCL"
+    ]
+  },
+  "IT - Large Caps": {
+    "symbols": [
+      "TCS",
+      "INFY",
+      "HCLTECH",
+      "WIPRO",
+      "TECHM",
+      "PERSISTENT",
+      "COFORGE",
+      "MPHASIS"
+    ]
+  },
+  "AI & Engineering R&D": {
+    "symbols": [
+      "KPITTECH",
+      "TATAELXSI",
+      "LTTS",
+      "CYIENT",
+      "SASKEN",
+      "NEWGEN",
+      "LATENTVIEW",
+      "AFFLE",
+      "INTELLECT",
+      "DATAMATICS",
+      "NETWEB",
+      "E2E"
+    ]
+  },
+  "Oil & Gas": {
+    "basic": [
+      "Oil Exploration & Production",
+      "Oil Equipment & Services",
+      "Offshore Support Solution Drilling",
+      "Refineries & Marketing",
+      "Gas Transmission/Marketing",
+      "LPG/CNG/PNG/LNG Supplier",
+      "Oil Storage & Transportation"
+    ]
+  },
+  "Metals & Mining": {
+    "basic": [
+      "Iron & Steel",
+      "Aluminium",
+      "Copper",
+      "Zinc",
+      "Coal",
+      "Diversified Metals",
+      "Iron & Steel Products",
+      "Sponge Iron",
+      "Pig Iron",
+      "Aluminium, Copper & Zinc Products"
+    ]
+  },
+  "Insurance": {
+    "basic": [
+      "General Insurance",
+      "Life Insurance",
+      "Insurance Distributors"
+    ]
+  },
+  "Logistics": {
+    "basic": [
+      "Logistics Solution Provider",
+      "Transport Related Services",
+      "Road Transport"
+    ]
+  },
+  "Specialty Chemicals": {
+    "basic": [
+      "Specialty Chemicals",
+      "Dyes And Pigments",
+      "Pesticides & Agrochemicals",
+      "Carbon Black",
+      "Petrochemicals"
+    ]
+  },
+  "NBFC & Fintech": {
+    "basic": [
+      "Non Banking Financial Company (NBFC)",
+      "Housing Finance Company",
+      "Microfinance Institutions",
+      "Financial Technology (Fintech)"
+    ]
+  },
+  "CDMO / CRDMO": {
+    "symbols": [
+      "DIVISLAB",
+      "SYNGENE",
+      "SUVEN",
+      "COHANCE",
+      "SAILIFE",
+      "NEULANDLAB",
+      "LAURUSLABS",
+      "ANTHEM",
+      "PPLPHARMA",
+      "GLAND",
+      "CONCORDBIO",
+      "JUBLPHARMA",
+      "DCAL",
+      "BLUEJET",
+      "VIMTALABS",
+      "SMSPHARMA"
+    ]
+  },
+  "Drones & Space": {
+    "symbols": [
+      "IDEAFORGE",
+      "ZENTEC",
+      "PARAS",
+      "APOLLO",
+      "DATAPATTNS",
+      "ASTRAMICRO",
+      "AVANTEL",
+      "AZAD",
+      "TANAA",
+      "UNIMECH",
+      "NELCO",
+      "DYNAMATECH",
+      "DCXINDIA",
+      "CENTUM"
+    ]
+  },
+  "Infra EPC": {
+    "symbols": [
+      "LT",
+      "KEC",
+      "KPIL",
+      "RVNL",
+      "IRCON",
+      "NCC",
+      "PNCINFRA",
+      "AHLUCONT",
+      "CEMPRO",
+      "DBL",
+      "ASHOKA",
+      "GRINFRA",
+      "HCC",
+      "PATELENG",
+      "POWERMECH",
+      "TECHNOE",
+      "TRANSRAILL",
+      "WELENT",
+      "AFCONS",
+      "CEIGALL",
+      "CAPACITE",
+      "WABAG",
+      "IRB",
+      "NBCC",
+      "ENGINERSIN"
+    ]
+  },
+  "PSU": {
+    "symbols": [
+      "SBIN",
+      "BANKBARODA",
+      "PNB",
+      "CANBK",
+      "UNIONBANK",
+      "INDIANB",
+      "MAHABANK",
+      "BANKINDIA",
+      "IOB",
+      "UCOBANK",
+      "CENTRALBK",
+      "PSB",
+      "ONGC",
+      "IOC",
+      "BPCL",
+      "HINDPETRO",
+      "GAIL",
+      "OIL",
+      "MRPL",
+      "NTPC",
+      "POWERGRID",
+      "COALINDIA",
+      "NMDC",
+      "SAIL",
+      "MOIL",
+      "NATIONALUM",
+      "HINDCOPPER",
+      "KIOCL",
+      "BHEL",
+      "HAL",
+      "BEL",
+      "BDL",
+      "MIDHANI",
+      "BEML",
+      "MAZDOCK",
+      "COCHINSHIP",
+      "GRSE",
+      "RVNL",
+      "IRCON",
+      "IRFC",
+      "IRCTC",
+      "CONCOR",
+      "RAILTEL",
+      "RITES",
+      "RECLTD",
+      "PFC",
+      "IREDA",
+      "HUDCO",
+      "LICI",
+      "GICRE",
+      "NIACL",
+      "NHPC",
+      "SJVN",
+      "NLCINDIA",
+      "ENGINERSIN",
+      "NBCC",
+      "FACT",
+      "RCF",
+      "NFL",
+      "MTNL",
+      "ITI",
+      "MMTC",
+      "STCINDIA",
+      "MSTCLTD",
+      "SCI",
+      "GMDCLTD"
+    ]
+  }
+}

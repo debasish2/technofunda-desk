@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Setup Desk Breadth</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f4fe0'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
+<style>
+.live{margin:-10px 0 14px;color:var(--muted)}.live b{color:var(--up);font-weight:600}
+.mab{margin:0 0 18px;padding:20px 24px}
+@media (max-width:600px){.mab{padding:16px}.perrow{row-gap:8px}}
+.segc{border-radius:9px}.segc button{padding:6px 13px}
+.live{display:block;width:fit-content;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px 14px;margin:-8px 0 16px}
+.live[hidden]{display:none}
+/* look */
+.ihg{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:6px}
+.iht{display:block;text-decoration:none;color:var(--ink);border-radius:8px;padding:8px 10px;min-height:62px;border:1px solid transparent;overflow:hidden}
+.iht:hover{border-color:var(--ink)}
+.iht b{display:block;font-weight:500;font-size:12.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iht span{display:block;margin-top:3px;font-size:15px;font-weight:600}
+.iht small{color:var(--muted);font-weight:400;font-size:11px}
+.ihs{margin:0 0 10px;color:var(--muted)}.ihs b{color:var(--ink);font-weight:600}
+.mab h2{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin:0 0 8px}
+.mab .d{margin:0 0 10px;color:var(--muted);line-height:1.5;max-width:70ch}
+.mabhead{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.mabctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.segc{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.segc button{border:0;background:none;padding:4px 11px;color:var(--muted);cursor:pointer}
+.segc button[aria-pressed=true]{background:var(--accent);color:#fff}
+.chk{display:flex;gap:6px;align-items:center;color:var(--muted)}
+.perrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+#mPer{display:flex;gap:6px;flex-wrap:wrap}
+.pch{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:none;color:var(--muted);cursor:pointer}
+.pch i{display:inline-block;width:10px;height:3px;border-radius:2px;background:var(--line)}
+.pch[aria-pressed=true]{color:var(--ink);border-color:var(--ink)}
+.addf{display:inline-flex;gap:6px}.addf input{width:130px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--panel);padding:0 8px}
+.mbi table{width:100%;border-collapse:collapse}
+.mbi th,.mbi td{padding:7px 10px;text-align:center;white-space:nowrap}
+.mbi th:first-child,.mbi td:first-child{text-align:left}
+.mbi .scroll{border:1px solid var(--line);border-radius:12px;overflow:auto}
+.mbi table{border-collapse:separate;border-spacing:0}
+.mbi thead th{background:var(--soft);color:var(--ink);font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;cursor:default;padding:9px 10px}
+.mbi thead tr.grp th{border-bottom:1px solid var(--line)}
+.mbi thead tr.sub th{font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);padding:6px 10px}
+.mbi table{table-layout:fixed;min-width:700px}.mbi th:first-child,.mbi td:first-child{width:112px}
+.mbi th.sep,.mbi td.sep{border-left:1px solid var(--line)}
+.mbi td{padding:0 10px;height:34px;font-size:13.5px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.mbi tbody tr:last-child td{border-bottom:0}
+.mbi tbody tr:hover td.n,.mbi tbody tr:hover td:not(.g):not(.r):not(.dg):not(.dr){background:var(--soft)}
+.mbi td.g,.mbi td.r,.mbi td.dg,.mbi td.dr{font-weight:600}
+.mbi td:first-child{font-weight:600;min-width:92px}
+.mbi .lv{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--up);color:#fff;font-size:10px;font-weight:700;letter-spacing:.04em;vertical-align:1px}
+.mbi td.g{background:color-mix(in srgb,var(--up) 15%,transparent)}.mbi td.r{background:color-mix(in srgb,var(--down) 15%,transparent)}.mbi td.n{background:none;color:var(--muted)}
+.mbi td.dg{background:color-mix(in srgb,var(--up) 22%,transparent);font-weight:600}.mbi td.dr{background:color-mix(in srgb,var(--down) 22%,transparent);font-weight:600}.mbi td.dw{color:var(--down);font-weight:600}
+.mbi .scroll{overflow-x:auto}
+.mabbody{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;align-items:start}
+.mabtable table{width:100%;border-collapse:collapse}
+.mabtable th,.mabtable td{padding:7px 8px;text-align:left;white-space:nowrap}
+.mabtable thead th{position:static;color:var(--muted);font-weight:500;font-size:12px;border-bottom:1px solid var(--line);cursor:default}
+.mabtable tbody tr{border-bottom:1px solid var(--line)}
+.mabtable .v{font-weight:600;text-align:right}
+.mabtable .st{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;color:#fff}
+.mabtable .bias{margin-top:10px;padding:8px 10px;border-radius:8px;font-weight:500}
+.mini{display:flex;gap:3px;margin-top:10px}.mini i{display:block;width:34px;height:14px;border-radius:3px}
+@media (max-width:900px){.mabbody{grid-template-columns:1fr}}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart h2{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin:0 0 8px}
+.chart p.d{margin:0 0 12px;color:var(--muted);line-height:1.5}
+.read{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 16px;margin:0 0 6px;min-height:22px}
+.read .k{color:var(--muted)}
+.read b{font-weight:600}
+.sw{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.plot{position:relative;height:210px}
+.plot svg{display:block;width:100%;height:100%;overflow:visible}
+.plot text{fill:var(--muted);font-size:11.5px}
+.plot .gl{stroke:var(--grid);stroke-width:1}
+.plot .zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4;opacity:.7}
+.plot .cross{stroke:var(--muted);stroke-width:1;opacity:.8}
+.plot .ln{fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.plot .dot{stroke:var(--panel);stroke-width:2}
+@media (max-width:900px){.charts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="topbar">
+  <a class="rb" href="/" title="Desk"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V4M3 16h14M6 12l3-4 3 2 4-5"/></svg><span class="lb">Desk</span></a>
+  <a class="rb" href="/screener" title="Screener"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h14l-5.5 6.5V16l-3-1.5v-3z"/></svg><span class="lb">Screener</span></a>
+  <a class="rb" href="/breadth" aria-current="page" title="Breadth"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V9M8 16V4M13 16v-5M17.5 16H2.5"/></svg><span class="lb">Breadth</span></a>
+  <a class="rb" href="/industries" title="Industries"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/></svg><span class="lb">Industries</span></a>
+  <span class="sp"></span>
+  <button class="rb" id="theme" title="Switch between light and dark"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 11.5A7 7 0 1 1 8.5 3.5a5.5 5.5 0 0 0 8 8z"/></svg><span class="lb">Theme</span></button>
+</nav>
+<main>
+  <h1>Market breadth trend</h1>
+  <p class="sub" id="sub">Loading…</p>
+  <p class="live" id="live" hidden></p>
+  <div id="warn"></div>
+  <section class="card mab" id="mab" hidden>
+    <div class="mabhead">
+      <div><h2>Stocks above their moving averages</h2>
+        <p class="d">Share of NSE stocks closing above the moving averages you pick (up to 8; tap a length below or add your own). With the longer averages (50 and over) selected, above 50% on all of them is a bullish bias and below 50% on all a bearish one. Above 80% reads overbought, below 20% oversold; neither is a reversal signal by itself.</p></div>
+      <div class="mabctl">
+        <div class="segc" id="mKind"><button data-k="ema" aria-pressed="true">EMA</button><button data-k="sma" aria-pressed="false">SMA</button></div>
+        <div class="segc" id="mSpan"><button data-s="130" aria-pressed="false">6M</button><button data-s="260" aria-pressed="true">1Y</button><button data-s="600" aria-pressed="false">All</button></div>
+        <label class="chk" id="mAvgL"><input type="checkbox" id="mAvg" checked> 50-day average of the 50-day line</label>
+      </div>
+    </div>
+    <div class="perrow"><span class="mut">Averages</span><span id="mPer"></span>
+      <form id="mAdd" class="addf"><input type="number" id="mNew" min="2" max="400" placeholder="Other, e.g. 30" aria-label="Add a moving average length"><button class="ghost" type="submit">Add</button></form></div>
+    <div class="mabbody">
+      <div class="mabtable" id="mabt"></div>
+      <div><div class="read" id="mabr"></div><div class="plot" id="mabp" style="height:260px"></div></div>
+    </div>
+  </section>
+  <section class="card mab mbi" id="mbi" hidden>
+    <div class="mabhead">
+      <div><h2>Market breadth dashboard</h2>
+        <p class="d">One row per session. <b>4R</b> is stocks up 4% or more over stocks down more than 4%, <b>20R</b> and <b>50R</b> are stocks above over stocks below their 20 and 50-day average (all times 100), and each <b>chg</b> is that ratio's change from the day before. <b>52WH / 52WL</b> are the stocks making a new 52-week high or low. Green and red cells follow the usual thresholds (4R above 200 or below 50; 20R above 75 or below 50; 50R above 85 or below 60; changes above +20 or below −20). A day is green when green cells outnumber red by 3 or more, red when red outnumber green by 3 or more; a day with 3 or more red cells that is not red is a <span style="color:var(--down);font-weight:600">warning</span> day.</p></div>
+      <div class="mabctl">
+        <div class="segc" id="bKind"><button data-k="sma" aria-pressed="true">SMA</button><button data-k="ema" aria-pressed="false">EMA</button></div>
+        <div class="segc" id="bThr"><button data-t="4" aria-pressed="true">4%</button><button data-t="4.5" aria-pressed="false">4.5%</button></div>
+        <div class="segc" id="bRows"><button data-r="5" aria-pressed="false">5</button><button data-r="10" aria-pressed="true">10</button><button data-r="20" aria-pressed="false">20</button><button data-r="40" aria-pressed="false">40</button></div>
+        <label class="chk"><input type="checkbox" id="bPro"> More columns</label>
+      </div>
+    </div>
+    <div class="scroll" id="mbiT"></div>
+    <p class="d" style="margin:10px 0 0;font-size:12px" id="mbiN"></p>
+  </section>
+  <section class="card mab" id="ih" hidden>
+    <div class="mabhead">
+      <div><h2>Industry heat</h2>
+        <p class="d">Each tile is an industry group, coloured by the average return of its stocks (₹500 Cr and above, at least 3 stocks). Deeper green or red means a bigger move. Click a tile to see its stocks on the Industries page.</p></div>
+      <div class="mabctl">
+        <div class="segc" id="iLvl"><button data-l="industry" aria-pressed="true">Industry</button><button data-l="sector" aria-pressed="false">Sector</button><button data-l="macro" aria-pressed="false">Macro</button><button data-l="theme" aria-pressed="false">Themes</button></div>
+        <div class="segc" id="iRng"><button data-r="today" aria-pressed="false">Today</button><button data-r="1w" aria-pressed="true">1W</button><button data-r="1m" aria-pressed="false">1M</button><button data-r="3m" aria-pressed="false">3M</button></div>
+      </div>
+    </div>
+    <p class="ihs" id="ihs"></p>
+    <div class="ihg" id="ihg"></div>
+  </section>
+  <div class="charts" id="charts"></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const nf0=new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}),nf1=new Intl.NumberFormat('en-IN',{minimumFractionDigits:1,maximumFractionDigits:1});
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dlabel=d=>{const [y,m,dd]=d.split('-');return +dd+' '+MON[+m-1]};
+try{const t=(JSON.parse(localStorage.getItem('setupdesk.v1')||'{}').theme)||localStorage.getItem('setupdesk.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+$('#theme').onclick=()=>{const d=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=d;try{const o=JSON.parse(localStorage.getItem('setupdesk.v1')||'{}');o.theme=d;localStorage.setItem('setupdesk.v1',JSON.stringify(o));localStorage.setItem('setupdesk.theme',d)}catch(e){}draw();};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+let B=null,hover=null;
+
+/* one definition per chart: its series, colours, and how to word the "Latest" readout for a given day */
+const CHARTS=[
+ {id:'ad',title:'Advance–decline line',desc:d=>`Running total of advancing minus declining stocks since ${dlabel(B.dates[0])}. Rising = more stocks going up than down.`,
+  series:[{k:'ad_line',c:'--blue',n:'A–D line'}],zero:true,
+  read:i=>`<span><span class="sw" style="background:var(--blue)"></span><span class="k">A–D line</span> <b>${nf0.format(B.ad_line[i])}</b></span><span class="mut">${nf0.format(B.advancing[i])} up · ${nf0.format(B.declining[i])} down</span>`},
+ {id:'thr',title:'Stocks up / down 4%+',desc:d=>'Stocks that closed at least 4% above / below the previous close. Surges mark thrust days and panic days.',
+  series:[{k:'up4',c:'--up',n:'Up 4%+'},{k:'down4',c:'--down',n:'Down 4%+'}],
+  read:i=>`<span><span class="sw" style="background:var(--up)"></span><span class="k">Up 4%+</span> <b>${nf0.format(B.up4[i])}</b></span><span><span class="sw" style="background:var(--down)"></span><span class="k">Down 4%+</span> <b>${nf0.format(B.down4[i])}</b></span><span class="mut">of ${nf0.format(B.traded[i])} traded</span>`},
+ {id:'par',title:'Participation',desc:d=>'Stocks above their 50 / 200-EMA. Widening gap = broadening advance.',
+  series:[{k:'above50',c:'--up',n:'Above 50-EMA'},{k:'above200',c:'--blue',n:'Above 200-EMA'}],
+  read:i=>`<span><span class="sw" style="background:var(--up)"></span><span class="k">Above 50-EMA</span> <b>${nf0.format(B.above50[i])}</b></span><span><span class="sw" style="background:var(--blue)"></span><span class="k">Above 200-EMA</span> <b>${nf0.format(B.above200[i])}</b></span><span class="mut">${nf1.format(B.pct50[i])}% / ${nf1.format(B.pct200[i])}% of stocks</span>`},
+ {id:'hl',title:'New highs vs new lows',desc:d=>'Within 2% of the 52-week extreme. Lows overtaking highs leads breakdowns.',
+  series:[{k:'new_high',c:'--up',n:'New 52W highs'},{k:'new_low',c:'--down',n:'New 52W lows'}],
+  read:i=>`<span><span class="sw" style="background:var(--up)"></span><span class="k">New 52W highs</span> <b>${nf0.format(B.new_high[i])}</b></span><span><span class="sw" style="background:var(--down)"></span><span class="k">New 52W lows</span> <b>${nf0.format(B.new_low[i])}</b></span>`},
+];
+
+function nice(lo,hi){ // three round-ish y labels: min, middle, max
+  const span=hi-lo||1;return [lo,lo+span/2,hi];
+}
+function plot(c,el){
+  const W=el.clientWidth,H=el.clientHeight,pl=52,pr=6,pt=8,pb=22,n=B.dates.length;
+  const all=c.series.flatMap(s=>B[s.k]);let lo=Math.min(...all,c.zero?0:Infinity),hi=Math.max(...all);if(!c.zero)lo=Math.min(lo,0);
+  const pad=(hi-lo)*.04;hi+=pad;if(c.zero||lo<0)lo-=pad;
+  const x=i=>pl+(W-pl-pr)*i/(n-1),y=v=>pt+(H-pt-pb)*(1-(v-lo)/(hi-lo||1));
+  const ticks=nice(lo,hi);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
+  for(const t of ticks)s+=`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${y(t)}" y2="${y(t)}"/><text x="${pl-8}" y="${y(t)+4}" text-anchor="end">${nf0.format(t)}</text>`;
+  if(c.zero&&lo<0&&hi>0)s+=`<line class="zero" x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}"/>`;
+  s+=`<text x="${pl}" y="${H-4}">${dlabel(B.dates[0])}</text><text x="${W-pr}" y="${H-4}" text-anchor="end">${dlabel(B.dates[n-1])}</text>`;
+  for(const se of c.series)s+=`<polyline class="ln" style="stroke:var(${se.c})" points="${B[se.k].map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}"/>`;
+  s+=`<g class="hv" style="display:none"><line class="cross" y1="${pt}" y2="${H-pb}"/>${c.series.map(se=>`<circle class="dot" r="4.5" style="fill:var(${se.c})"/>`).join('')}</g>`;
+  s+=`<text class="hd" x="0" y="${H-4}" text-anchor="middle" style="display:none;fill:var(--ink);font-weight:600"></text></svg>`;
+  el.innerHTML=s;el._geo={x,y,pl,pr,W,n};
+}
+function readouts(i){
+  for(const c of CHARTS)document.querySelector(`#r-${c.id}`).innerHTML=c.read(i);
+}
+function cross(i){
+  for(const c of CHARTS){
+    const el=document.querySelector(`#p-${c.id}`),g=el._geo,hv=el.querySelector('.hv'),hd=el.querySelector('.hd');
+    if(i==null){hv.style.display='none';hd.style.display='none';continue}
+    const X=g.x(i);hv.style.display='';hd.style.display='';
+    hv.querySelector('.cross').setAttribute('x1',X);hv.querySelector('.cross').setAttribute('x2',X);
+    c.series.forEach((se,j)=>{const d=hv.querySelectorAll('.dot')[j];d.setAttribute('cx',X);d.setAttribute('cy',g.y(B[se.k][i]))});
+    hd.setAttribute('x',Math.min(Math.max(X,g.pl+24),g.W-g.pr-24));hd.textContent=dlabel(B.dates[i]);
+  }
+}
+function draw(){
+  if(!B)return;
+  $('#charts').innerHTML=CHARTS.map(c=>`<section class="card chart"><h2>${c.title}</h2><p class="d">${c.desc()}</p><div class="read"><span class="k">${hover==null?'Latest':'On'}</span><span class="read" id="r-${c.id}"></span></div><div class="plot" id="p-${c.id}"></div></section>`).join('');
+  for(const c of CHARTS){
+    const el=document.querySelector(`#p-${c.id}`);plot(c,el);
+    const at=e=>{const r=el.getBoundingClientRect(),g=el._geo,t=(e.clientX-r.left-g.pl)/(g.W-g.pl-g.pr);return Math.max(0,Math.min(g.n-1,Math.round(t*(g.n-1))))};
+    el.addEventListener('pointermove',e=>{hover=at(e);readouts(hover);cross(hover);document.querySelectorAll('.read>.k:first-child').forEach(k=>k.textContent='On '+dlabel(B.dates[hover]))});
+    el.addEventListener('pointerleave',()=>{hover=null;readouts(B.dates.length-1);cross(null);document.querySelectorAll('.read>.k:first-child').forEach(k=>k.textContent='Latest')});
+  }
+  readouts(hover??B.dates.length-1);if(hover!=null)cross(hover);
+}
+/* ---------- stocks above their moving averages ---------- */
+/* each length keeps its own colour wherever it sits in the list, and neighbouring lengths are far apart in hue */
+const FIX={5:'#7d8aa0',10:'#f59f00',20:'#1c7ed6',21:'#15aabf',30:'#7048e8',50:'#2f9e44',100:'#e8590c',150:'#c2255c',200:'#e03131'},EXTRA=['#0b7285','#862e9c','#5c940d','#a61e4d','#364fc7','#99620d'];
+const PRESETS=[5,10,20,21,30,50,100,150,200];
+const MA={kind:'ema',span:260,avg:true,D:null,hover:null,per:[10,20,50,200]};
+try{const p=JSON.parse(localStorage.getItem('setupdesk.mabp')||'null');if(Array.isArray(p)&&p.length&&p.every(n=>n>=2&&n<=400))MA.per=p.slice(0,8)}catch(e){}
+const perCol=n=>FIX[n]||EXTRA[n%EXTRA.length];
+const state=v=>v==null?['–','--muted']:v>=80?['Overbought','--amber']:v>=50?['Strong','--up']:v>=20?['Weak','--down']:['Oversold','--blue'];
+function perChips(){
+  const all=[...new Set([...PRESETS,...MA.per])].sort((a,b)=>a-b);
+  $('#mPer').innerHTML=all.map(n=>{const on=MA.per.includes(n);return `<button class="pch" data-n="${n}" aria-pressed="${on}"><i style="${on?'background:'+perCol(n):''}"></i>${n}</button>`}).join('');
+}
+function savePer(){try{localStorage.setItem('setupdesk.mabp',JSON.stringify(MA.per))}catch(e){}perChips();loadMA()}
+$('#mPer').onclick=e=>{const b=e.target.closest('.pch');if(!b)return;const n=+b.dataset.n;
+  if(MA.per.includes(n)){if(MA.per.length>1)MA.per=MA.per.filter(x=>x!==n)}else if(MA.per.length<8)MA.per=[...MA.per,n].sort((a,b)=>a-b);savePer()};
+$('#mAdd').onsubmit=e=>{e.preventDefault();const n=Math.round(+$('#mNew').value);if(!(n>=2&&n<=400))return;
+  if(!MA.per.includes(n)&&MA.per.length<8)MA.per=[...MA.per,n].sort((a,b)=>a-b);$('#mNew').value='';savePer()};
+async function loadMA(){
+  try{const r=await fetch(`/api/breadth/ma?kind=${MA.kind}&sessions=${MA.span}&periods=${MA.per.join(',')}`);if(!r.ok)throw 0;MA.D=await r.json()}catch(e){$('#mab').hidden=true;return}
+  $('#mab').hidden=false;$('#mAvgL').style.display=MA.D.avg50?'':'none';setLive(MA.D.live);drawMA();
+}
+function maTable(i){
+  const D=MA.D,per=D.periods,v=n=>D['p'+n][i];
+  const long=per.filter(n=>n>=50),vals=long.map(v);
+  const bias=!long.length?['Pick a 50-day or longer average to get the bias reading','--muted']:vals.some(x=>x==null)?['Not enough history yet','--muted']:vals.every(x=>x>50)?[`Bullish bias: more than half of stocks are above their ${long.join(' and ')}-day average`,'--up']:vals.every(x=>x<50)?[`Bearish bias: fewer than half of stocks are above their ${long.join(' and ')}-day average`,'--down']:['Mixed: the longer averages disagree','--amber'];
+  $('#mabt').innerHTML=`<table><thead><tr><th>Average</th><th style="text-align:right">% above</th><th>State</th></tr></thead><tbody>${per.map(n=>{const x=v(n),[t,c]=state(x);
+    return `<tr><td><span class="sw" style="background:${perCol(n)}"></span>${n}-day ${MA.kind.toUpperCase()}</td><td class="v">${x==null?'–':nf1.format(x)+'%'}</td><td><span class="st" style="background:var(${c})">${t}</span></td></tr>`}).join('')}</tbody></table>
+    <div class="bias" style="background:color-mix(in srgb,var(${bias[1]}) 14%,transparent);color:var(${bias[1]})">${bias[0]}</div>
+    <div class="mini" title="One block per average, shortest first">${per.map(n=>`<i style="background:var(${state(v(n))[1]})"></i>`).join('')}</div>
+    <p class="d" style="margin-top:10px;font-size:12px">${nf0.format(D['n'+per[0]][i]||0)} stocks counted for the ${per[0]}-day${per.length>1?', '+nf0.format(D['n'+per[per.length-1]][i]||0)+' for the '+per[per.length-1]+'-day':''} (a stock joins once it has that many sessions). Universe: NSE stocks closing at ₹1 or more.</p>`;
+  $('#mabr').innerHTML=`<span class="k">${MA.hover==null?'Latest':'On'} ${dlabel(D.dates[i])} ${D.dates[i].slice(0,4)}</span> `+per.map(n=>{const x=v(n);return `<span><span class="sw" style="background:${perCol(n)}"></span><span class="k">${n}</span> <b>${x==null?'–':nf1.format(x)+'%'}</b></span>`}).join(' ');
+}
+function drawMA(){
+  const D=MA.D;if(!D)return;const el=$('#mabp'),n=D.dates.length;
+  const W=el.clientWidth,H=el.clientHeight,pl=40,pr=6,pt=8,pb=22,x=i=>pl+(W-pl-pr)*i/(n-1),y=v=>pt+(H-pt-pb)*(1-v/100);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
+  s+=`<rect x="${pl}" y="${y(100)}" width="${W-pl-pr}" height="${y(80)-y(100)}" fill="var(--amber)" opacity=".07"/><rect x="${pl}" y="${y(20)}" width="${W-pl-pr}" height="${y(0)-y(20)}" fill="var(--blue)" opacity=".07"/>`;
+  for(const t of [0,20,50,80,100])s+=`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${y(t)}" y2="${y(t)}" ${t===50?'style="stroke-dasharray:4 4;stroke:var(--muted)"':''}/><text x="${pl-6}" y="${y(t)+4}" text-anchor="end">${t}</text>`;
+  const dy=d=>dlabel(d)+' '+d.slice(2,4);
+  s+=`<text x="${pl}" y="${H-4}">${dy(D.dates[0])}</text><text x="${W-pr}" y="${H-4}" text-anchor="end">${dy(D.dates[n-1])}</text>`;
+  const line=(arr,c,dash,w=1.8)=>{let d='',pen=false;arr.forEach((v,i)=>{if(v==null){pen=false;return}d+=(pen?'L':'M')+x(i).toFixed(1)+','+y(v).toFixed(1);pen=true});return `<path d="${d}" fill="none" style="stroke:${c};stroke-width:${w};${dash?'stroke-dasharray:5 4;':''}stroke-linejoin:round"/>`};
+  for(const m of D.periods)s+=line(D['p'+m],perCol(m));
+  if(MA.avg&&D.avg50)s+=line(D.avg50,perCol(50),true,1.4);
+  s+=`<g class="hv" style="display:none"><line class="cross" y1="${pt}" y2="${H-pb}"/></g></svg>`;
+  el.innerHTML=s;el._g={x,pl,pr,W,n};maTable(MA.hover??n-1);
+}
+{const el=$('#mabp');
+ const at=e=>{const r=el.getBoundingClientRect(),g=el._g,t=(e.clientX-r.left-g.pl)/(g.W-g.pl-g.pr);return Math.max(0,Math.min(g.n-1,Math.round(t*(g.n-1))))};
+ el.addEventListener('pointermove',e=>{if(!el._g)return;MA.hover=at(e);maTable(MA.hover);const hv=el.querySelector('.hv'),X=el._g.x(MA.hover);hv.style.display='';hv.querySelector('.cross').setAttribute('x1',X);hv.querySelector('.cross').setAttribute('x2',X)});
+ el.addEventListener('pointerleave',()=>{MA.hover=null;if(MA.D){maTable(MA.D.dates.length-1);const hv=el.querySelector('.hv');if(hv)hv.style.display='none'}});
+}
+$('#mKind').onclick=e=>{const b=e.target.closest('button');if(!b)return;MA.kind=b.dataset.k;document.querySelectorAll('#mKind button').forEach(x=>x.setAttribute('aria-pressed',x===b));loadMA()};
+$('#mSpan').onclick=e=>{const b=e.target.closest('button');if(!b)return;MA.span=+b.dataset.s;document.querySelectorAll('#mSpan button').forEach(x=>x.setAttribute('aria-pressed',x===b));loadMA()};
+$('#mAvg').onchange=e=>{MA.avg=e.target.checked;drawMA()};
+perChips();loadMA();
+
+/* ---------- the market breadth dashboard ---------- */
+const MB={kind:'sma',thr:4,rows:10,pro:false,D:null};
+async function loadMBI(){
+  try{const r=await fetch(`/api/breadth/mbi?kind=${MB.kind}&thr=${MB.thr}&sessions=${Math.max(MB.rows,10)+1}`);if(!r.ok)throw 0;MB.D=await r.json()}catch(e){$('#mbi').hidden=true;return}
+  $('#mbi').hidden=false;setLive(MB.D.live);drawMBI();
+}
+function drawMBI(){
+  const D=MB.D,n=D.dates.length,first=Math.max(1,n-MB.rows);
+  const fm=v=>v==null?'–':Math.abs(v)>=1000?nf0.format(v):nf1.format(v);
+  const box=(v,hi,lo,inv)=>v==null?'n':v>hi?'g':v<lo?'r':'';             // g / r / neutral
+  const rows=[];
+  for(let i=n-1;i>=first;i--){
+    const c=[box(D.r4[i],200,50),box(D.r4_chg[i],20,-20),box(D.r20[i],75,50),box(D.r20_chg[i],20,-20),box(D.r50[i],85,60),box(D.r50_chg[i],20,-20)];
+    const g=c.filter(x=>x==='g').length,r=c.filter(x=>x==='r').length,day=g-r>=3?'dg':r-g>=3?'dr':r>=3?'dw':'';
+    const sg=v=>v==null?'–':(v>0?'+':v<0?'−':'')+fm(Math.abs(v));
+    const pro=MB.pro?`<td>${nf0.format(D.up[i])}</td><td>${nf0.format(D.down[i])}</td><td>${fm(D.a10[i])}%</td><td>${fm(D.a20[i])}%</td><td>${fm(D.a50[i])}%</td><td>${fm(D.a200[i])}%</td><td class="${D.idx_chg[i]==null?'n':D.idx_chg[i]>=0?'g':'r'}">${D.idx_chg[i]==null?'–':(D.idx_chg[i]>=0?'+':'')+nf1.format(D.idx_chg[i])+'%'}</td>`:'';
+    rows.push(`<tr><td class="${day}" title="${day==='dg'?'Green day':day==='dr'?'Red day':day==='dw'?'Warning day: 3 or more red cells':'Neutral day'}">${dlabel(D.dates[i])}${D.live&&i===n-1?'<span class="lv" title="Today\'s running session">LIVE</span>':''}</td>${[D.r4[i],D.r4_chg[i],D.r20[i],D.r20_chg[i],D.r50[i],D.r50_chg[i]].map((v,k)=>`<td class="${c[k]||''}${k%2===0?' sep':''}">${k%2?sg(v):fm(v)}</td>`).join('')}<td class="n sep" title="${nf0.format(D.nh[i])} stocks">${nf1.format(D.nh[i]/D.traded[i]*100)}%</td><td class="n" title="${nf0.format(D.nl[i])} stocks">${nf1.format(D.nl[i]/D.traded[i]*100)}%</td>${pro}</tr>`);
+  }
+  const t4=MB.thr===4.5?'4.5':'4';
+  $('#mbiT').innerHTML=`<table><thead><tr class="grp"><th rowspan="2">Date</th><th colspan="2" class="sep">${t4}R</th><th colspan="2" class="sep">20R</th><th colspan="2" class="sep">50R</th><th colspan="2" class="sep" title="Share of traded stocks making a new 52-week high or low">New 52-week</th>${MB.pro?`<th colspan="7" class="sep">More</th>`:''}</tr><tr class="sub"><th class="sep">Value</th><th>Change</th><th class="sep">Value</th><th>Change</th><th class="sep">Value</th><th>Change</th><th class="sep" title="Share of stocks making a new 52-week high">High</th><th title="Share of stocks making a new 52-week low">Low</th>${MB.pro?`<th class="sep">${t4}%+</th><th>${t4}%−</th><th>10+</th><th>20+</th><th>50+</th><th>200+</th><th>Index</th>`:''}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  $('#mbiN').textContent=`${D.live?'The top row is provisional (live). ':''}${MB.kind.toUpperCase()} averages · universe: NSE stocks closing at ₹1 or more (about ${nf0.format(D.traded[n-1])} traded on ${dlabel(D.dates[n-1])}). The overall day colour counts the six coloured columns. The EM / XP scores of the TradingView version are not included. 52WH / 52WL are shares of traded stocks; hover for the stock counts.`;
+}
+$('#bKind').onclick=e=>{const b=e.target.closest('button');if(!b)return;MB.kind=b.dataset.k;document.querySelectorAll('#bKind button').forEach(x=>x.setAttribute('aria-pressed',x===b));loadMBI()};
+$('#bThr').onclick=e=>{const b=e.target.closest('button');if(!b)return;MB.thr=+b.dataset.t;document.querySelectorAll('#bThr button').forEach(x=>x.setAttribute('aria-pressed',x===b));loadMBI()};
+$('#bRows').onclick=e=>{const b=e.target.closest('button');if(!b)return;MB.rows=+b.dataset.r;document.querySelectorAll('#bRows button').forEach(x=>x.setAttribute('aria-pressed',x===b));loadMBI()};
+$('#bPro').onchange=e=>{MB.pro=e.target.checked;drawMBI()};
+/* ---------- industry heat ---------- */
+const nf2=new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}),esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const IH={lvl:'industry',rng:'1w',D:null},IHMAX={today:3,'1w':6,'1m':12,'3m':25};
+async function loadIH(){
+  try{const r=await fetch(`/api/industries?level=${IH.lvl}&min_mcap=500&min_n=3&agg=mean`);if(!r.ok)throw 0;IH.D=await r.json()}catch(e){$('#ih').hidden=true;return}
+  $('#ih').hidden=false;drawIH();
+}
+function drawIH(){
+  const k=IH.rng,rows=IH.D.rows.filter(r=>r[k]!=null).sort((a,b)=>b[k]-a[k]),mx=IHMAX[k];
+  const up=rows.filter(r=>r[k]>=0).length,sg=v=>(v>=0?'+':'−')+nf2.format(Math.abs(v))+'%';
+  const wide=rows.filter(r=>r.above50!=null&&r.above50>=60).length;
+  $('#ihs').innerHTML=rows.length?`<b>${up}</b> of ${rows.length} groups are up over ${({today:'today','1w':'1 week','1m':'1 month','3m':'3 months'})[k]} · strongest <b>${esc(rows[0].name)}</b> ${sg(rows[0][k])} · weakest <b>${esc(rows[rows.length-1].name)}</b> ${sg(rows[rows.length-1][k])} · <b>${wide}</b> have 60%+ of their stocks above the 50-day average`:'';
+  $('#ihg').innerHTML=rows.map(r=>{const a=Math.min(1,Math.abs(r[k])/mx),c=r[k]>=0?'--up':'--down';
+    const tip=`${r.name}: today ${r.today==null?'–':sg(r.today)}, 1W ${r['1w']==null?'–':sg(r['1w'])}, 1M ${r['1m']==null?'–':sg(r['1m'])}, 3M ${r['3m']==null?'–':sg(r['3m'])}; ${r.n} stocks; ${r.above50==null?'–':nf0.format(r.above50)+'%'} above the 50-day average`;
+    return `<a class="iht" href="/industries?level=${IH.lvl}&open=${encodeURIComponent(r.name)}" title="${esc(tip)}" style="background:color-mix(in srgb,var(${c}) ${Math.round(14+a*66)}%,var(--panel))"><b>${esc(r.name)}</b><span>${sg(r[k])} <small>${r.n}</small></span></a>`}).join('');
+}
+$('#iLvl').onclick=e=>{const b=e.target.closest('button');if(!b)return;IH.lvl=b.dataset.l;document.querySelectorAll('#iLvl button').forEach(x=>x.setAttribute('aria-pressed',x===b));loadIH()};
+$('#iRng').onclick=e=>{const b=e.target.closest('button');if(!b)return;IH.rng=b.dataset.r;document.querySelectorAll('#iRng button').forEach(x=>x.setAttribute('aria-pressed',x===b));if(IH.D)drawIH()};
+loadIH();
+loadMBI();
+addEventListener('resize',()=>{clearTimeout(window._t);window._t=setTimeout(()=>{draw();drawMA()},120)});
+function setLive(l){
+  const el=$('#live');if(!l){el.hidden=true;return}
+  el.hidden=false;el.innerHTML=`<b>● Live</b> · the latest row is today's running session as of ${l.asof.slice(11,16)} IST (${nf0.format(l.n)} stocks, prices about 15 minutes late), refreshed every hour while NSE is open; the end-of-day load replaces it tonight.`;
+}
+async function loadB(){
+  try{
+    const r=await fetch('/api/breadth');if(!r.ok)throw new Error(r.status);B=await r.json();setLive(B.live);
+    $('#sub').textContent=`Last ${B.sessions} sessions, ${dlabel(B.dates[0])} – ${dlabel(B.dates[B.dates.length-1])} · hover any chart to read that day on all four`;
+    draw();
+  }catch(e){$('#sub').textContent='';$('#warn').innerHTML='<div class="warn">Breadth data is not available yet. Run <code>python -m backend.market</code> to load the market.</div>'}
+}
+loadB();
+setInterval(()=>{if(document.hidden)return;loadB();loadMA();loadMBI();loadIH()},5*60*1000);      // pick up the hourly live snapshot
+
+fetch('/api/status').then(r=>r.json()).then(s=>{
+  if(s.never_run)return;
+  const m=[...(s.warnings||[])];
+  if(s.exit_code===2)m.unshift('The last nightly refresh failed, so this is data from an earlier run.');
+  if(s.age_hours>60)m.unshift('The last refresh finished '+Math.round(s.age_hours/24)+' days ago.');
+  if(m.length)document.querySelector('#warn').insertAdjacentHTML('beforeend','<div class="warn"><b>Data check:</b> '+m.map(x=>String(x).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))).join(' &middot; ')+'</div>');
+}).catch(()=>{});
+</script>
+</body>
+</html>

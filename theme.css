@@ -1,0 +1,75 @@
+/* shared by screener.html and breadth.html; tokens match setup-desk.html */
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--ink:#12161d;--muted:#6b7280;--line:#e6e8ee;--soft:#f3f4f7;
+  --accent:#2f4fe0;--up:#0b9a62;--down:#d3323d;--amber:#c97b08;--blue:#2f6fe0;--grid:#eceef2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1015;--panel:#151a21;--ink:#e7eaf0;--muted:#8d96a5;--line:#252b35;--soft:#1a2029;
+    --accent:#7088ff;--up:#2bc48a;--down:#f06670;--amber:#e2a13a;--blue:#6e9bff;--grid:#1c222b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1015;--panel:#151a21;--ink:#e7eaf0;--muted:#8d96a5;--line:#252b35;--soft:#1a2029;
+  --accent:#7088ff;--up:#2bc48a;--down:#f06670;--amber:#e2a13a;--blue:#6e9bff;--grid:#1c222b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.up{color:var(--up)}.down{color:var(--down)}.mut{color:var(--muted)}
+
+:root{--rail:60px}
+body{padding-left:var(--rail)}
+.topbar{position:fixed;left:0;top:0;bottom:0;width:var(--rail);display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;
+  background:var(--panel);border-right:1px solid var(--line);z-index:30}
+.rb{display:flex;flex-direction:column;align-items:center;gap:3px;width:52px;padding:7px 0;border:0;background:none;border-radius:9px;color:var(--muted);
+  text-decoration:none;font-size:10.5px;line-height:1.1;cursor:pointer}
+.rb:hover{background:var(--soft);color:var(--ink)}
+.rb[aria-current=page]{color:var(--accent);background:var(--soft)}
+.topbar .sp{flex:1}
+@media (max-width:1100px){
+  body{padding-left:0;padding-top:54px}
+  .topbar{right:0;bottom:auto;width:auto;height:54px;flex-direction:row;padding:0 10px;gap:6px;border-right:0;border-bottom:1px solid var(--line)}
+  .rb{flex-direction:row;width:auto;padding:8px 12px;font-size:13px}.rb svg{display:none}
+}
+.ghost{background:var(--soft);border:1px solid var(--line);border-radius:7px;padding:6px 11px;color:var(--muted)}
+.ghost:hover{color:var(--ink)}
+
+main{max-width:1280px;margin:0 auto;padding:22px 16px 60px}
+h1{font-size:20px;font-weight:600;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.note{color:var(--muted);font-size:12.5px}
+.warn{background:var(--soft);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:8px;padding:9px 12px;margin:0 0 16px;color:var(--ink)}
+
+table{border-collapse:collapse;width:100%}
+th,td{padding:7px 10px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+thead th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:500;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+thead th[aria-sort]{color:var(--ink)}
+tbody tr{border-bottom:1px solid var(--line)}
+tbody tr:hover{background:var(--soft)}
+.scrollx{overflow-x:auto}
+
+/* light, easy-to-see scrollbars on every page */
+:root{--sb:#b9c0cd;--sbt:#eceef2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--sb:#a3acbd;--sbt:#262c37}}
+:root[data-theme="dark"]{--sb:#a3acbd;--sbt:#262c37}
+*{scrollbar-color:var(--sb) var(--sbt)}
+
+/* polish */
+::selection{background:color-mix(in srgb,var(--accent) 24%,transparent)}
+button,.rb,.pill,.chips button,.segc button,.seg button,.tg,.ghost,.ddb,a{transition:background-color .12s,color .12s,border-color .12s,box-shadow .12s,opacity .12s}
+button:active:not(:disabled){transform:translateY(.5px)}
+button:disabled{cursor:not-allowed}
+.card{border-radius:14px}
+h1{letter-spacing:-.01em}
+a{text-underline-offset:3px}
+.skel{position:relative;overflow:hidden;background:var(--soft);border-radius:6px}
+.skel:after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ink) 7%,transparent),transparent);animation:shimmer 1.3s infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

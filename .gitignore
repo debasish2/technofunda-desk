@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets and local settings
+.env
+.claude/
+
+# Data: databases, logs and caches are rebuilt by the nightly job (python -m backend.nightly), and are far too big for GitHub.
+# Only the themes you maintain by hand are kept.
+data/*
+!data/themes.json
+
+# Editor and OS files
+.vscode/
+.idea/
+Thumbs.db
+*.tmp

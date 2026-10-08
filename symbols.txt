@@ -1,0 +1,6 @@
+# One NSE symbol per line, optional sector after a comma. These are examples only.
+STLTECH,Telecom - Equipment & Accessories
+HFCL,Telecom - Equipment & Accessories
+TEJASNET,Telecom - Equipment & Accessories
+BHARATFORG,Auto Components
+SONACOMS,Auto Components
