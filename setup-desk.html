@@ -361,6 +361,8 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 .brand{display:grid;place-items:center;width:34px;height:34px;margin:0 0 6px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;letter-spacing:.02em}
 .rb.mode[aria-pressed=true]{background:var(--soft);color:var(--accent);opacity:1}.rb.mode[aria-pressed=false]{opacity:1}
 .railzone{display:none}
+#toolsBtn{display:none}
+#toolsBtn[aria-pressed=true]{color:var(--accent)}
 @media (min-width:1101px){
   .app{--rail:0px;grid-template-columns:var(--wl) minmax(0,1fr);grid-template-areas:"head center" "list center"}
   .top{position:fixed;left:0;top:0;bottom:0;width:64px;z-index:70;transform:translateX(-102%);transition:transform .16s ease}
@@ -377,7 +379,14 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
   .app.research .tabs{justify-content:flex-start}.app.research .tabs button{flex:0 0 auto;padding:16px 20px;font-size:14.5px}
 }
 @media (max-width:1100px){
-  .rb.mode,.brand{display:none}
+  .brand{display:none}
+  .top{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}.top::-webkit-scrollbar{display:none}
+  .top .rb{flex:none}
+  .rb.mode{flex-direction:row;width:auto}
+  .rb.mode[aria-pressed=true]{background:var(--soft);color:var(--accent)}
+  .right{display:none}
+  .app.research .right{display:block}
+  .app.research .chartwrap,.app.research .qstats,.app.research .statbar{display:none}
   .app{grid-template-rows:54px auto auto auto;grid-template-areas:"top" "head" "center" "right"}
   .head{padding:8px 12px}.head .hnote,.head #hMenu{display:none}
 }
@@ -417,10 +426,16 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
   .stockhead h1{white-space:normal;font-size:19px}
   .px{font-size:24px}
   .chartrow{flex-direction:column}
-  .tools{flex-direction:row;width:auto;height:46px;flex:none;padding:5px 8px;gap:4px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;align-items:center}
-  .tools hr{width:0;height:22px;border:0;border-left:1px solid var(--line);margin:0 4px}
-  .tools .tgw{flex:none}
-  #vwSeg{display:none}             /* Chart / Research only changes the split on a wide screen */
+  .tools{display:none}               /* the drawing tools live in a drop-down under the Draw button */
+  #toolsBtn{display:inline-flex}
+  .chartrow.tools-open .tools{display:flex;flex-direction:row;flex-wrap:wrap;position:absolute;left:8px;right:8px;top:6px;z-index:36;width:auto;height:auto;max-height:78%;overflow-y:auto;padding:8px;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 36px rgba(0,0,0,.4);align-items:center}
+  .chartrow.tools-open .tools button{width:40px;height:40px}
+  .chartrow.tools-open .tools hr{width:100%;height:0;border:0;border-top:1px solid var(--line);margin:4px 0}
+  .chartrow.tools-open .tools .tgw{flex:none}
+  .chartrow.tools-open .tools .fl{width:20px;height:30px;font-size:12px;right:-9px;bottom:5px}
+  .chartrow.tools-open .tools .tgw{margin-right:8px}
+  #toolsBtn .tx{display:inline!important}
+  .flyout{z-index:80;position:fixed!important;left:10px!important;right:10px!important;top:auto!important;bottom:10px!important;max-height:62vh!important;box-shadow:0 -10px 40px rgba(0,0,0,.45)}
   #legend{max-width:calc(100% - 84px);font-size:11.5px;line-height:1.45}
   .chartwrap{height:520px}
   .ctl{padding:8px 10px}
@@ -548,6 +563,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
           <div class="seg ddm" id="rgSeg" hidden>
             <button data-rg="3M" aria-pressed="false">3M</button><button data-rg="6M" aria-pressed="false">6M</button><button data-rg="1Y" aria-pressed="false">1Y</button><button data-rg="3Y" aria-pressed="false">3Y</button><button data-rg="5Y" aria-pressed="false">5Y</button><button data-rg="Max" aria-pressed="true">Max</button>
           </div></div>
+        <button class="tg" id="toolsBtn" aria-expanded="false" title="Drawing tools: lines, Fibonacci, shapes, text, magnet, lock">✎<span class="tx"> Draw</span> <i>▾</i></button>
         <span class="vsep"></span>
         <button class="tg" id="grBtn" aria-pressed="false" title="Mark quarterly result grades on the chart">◍<span class="tx"> Grades</span></button>
         <button class="tg" id="inBtn" aria-pressed="false" title="Mark insider trades on the chart">⇅<span class="tx"> Insider</span></button>
@@ -1690,6 +1706,7 @@ function buildTools(){
 }
 function updTools(){
   const T=$('#tools');if(!T.querySelector('[data-act]'))return;
+  $('#toolsBtn').setAttribute('aria-pressed',st.tool!=='cursor');
   T.classList.toggle('locked',st.lock);
   for(const [k,v] of [['magnet',st.magnet],['keep',st.keep],['lock',st.lock],['hide',st.dHide]])T.querySelector(`[data-act=${k}]`).setAttribute('aria-pressed',v);
   T.querySelector('[data-act=undo]').disabled=st.lock||!dh.undo.length;
@@ -1878,12 +1895,15 @@ function openFly(gi,btn){
     f.style.top=(tr.bottom-pr.top+2)+'px';f.style.left=Math.max(4,Math.min(br.left-pr.left,pr.width-250))+'px'}
   f.hidden=false;
 }
-$('#fly').addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(!b||st.lock)return;$('#fly').hidden=true;setTool(b.dataset.pick)});
+$('#fly').addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(!b||st.lock)return;$('#fly').hidden=true;setTool(b.dataset.pick);$('.chartrow').classList.remove('tools-open')});
 document.addEventListener('click',e=>{if(!e.target.closest('#fly')&&!e.target.closest('.fl'))$('#fly').hidden=true});
+const trow=$('.chartrow');
+$('#toolsBtn').addEventListener('click',e=>{e.stopPropagation();const on=trow.classList.toggle('tools-open');$('#toolsBtn').setAttribute('aria-expanded',on);$('#fly').hidden=true});
+document.addEventListener('click',e=>{if(trow.classList.contains('tools-open')&&!e.target.closest('#tools,#toolsBtn,#fly,#objpop')){trow.classList.remove('tools-open');$('#toolsBtn').setAttribute('aria-expanded',false)}});
 $('#tools').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b||b.disabled)return;
   if(b.dataset.fly!=null){e.stopPropagation();const f=$('#fly');if(!f.hidden&&f.dataset.g===b.dataset.fly){f.hidden=true;return}f.dataset.g=b.dataset.fly;openFly(+b.dataset.fly,b);return}
-  if(b.dataset.tool){if(st.lock&&b.dataset.tool!=='cursor')return;$('#fly').hidden=true;setTool(b.dataset.tool);return}
+  if(b.dataset.tool){if(st.lock&&b.dataset.tool!=='cursor')return;$('#fly').hidden=true;setTool(b.dataset.tool);trow.classList.remove('tools-open');return}
   switch(b.dataset.act){
     case 'magnet':st.magnet=!st.magnet;prefs.mg=st.magnet;save();break;
     case 'keep':st.keep=!st.keep;prefs.kp=st.keep;save();break;
