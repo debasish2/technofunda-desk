@@ -1,0 +1,20 @@
+[Unit]
+Description=TechnoFunda Desk (web app)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=desk
+Group=desk
+WorkingDirectory=/opt/technofunda
+EnvironmentFile=/etc/technofunda.env
+ExecStart=/opt/technofunda/.venv/bin/python -m uvicorn backend.app:app --host ${BIND} --port 8000
+Restart=always
+RestartSec=5
+# the app only writes inside data/
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/technofunda
+
+[Install]
+WantedBy=multi-user.target

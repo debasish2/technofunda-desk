@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily copy of the logins, settings and saved screens
+
+[Timer]
+OnCalendar=*-*-* 22:30 Asia/Kolkata
+Persistent=true
+Unit=technofunda-job@backup.service
+
+[Install]
+WantedBy=timers.target

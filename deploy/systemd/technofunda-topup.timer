@@ -1,0 +1,9 @@
+[Unit]
+Description=Delivery file and saved screens again, in case NSE's file came late (IST)
+
+[Timer]
+OnCalendar=Mon..Fri 20:15 Asia/Kolkata
+Unit=technofunda-job@topup.service
+
+[Install]
+WantedBy=timers.target

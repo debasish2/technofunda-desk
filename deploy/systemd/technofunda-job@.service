@@ -1,0 +1,12 @@
+[Unit]
+Description=TechnoFunda Desk job: %i
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=desk
+Group=desk
+WorkingDirectory=/opt/technofunda
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/technofunda/deploy/run_job.sh %i
+TimeoutStartSec=6h

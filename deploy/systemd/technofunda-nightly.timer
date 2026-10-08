@@ -1,0 +1,10 @@
+[Unit]
+Description=Prices for the whole market, every weekday evening (IST)
+
+[Timer]
+OnCalendar=Mon..Fri 18:45 Asia/Kolkata
+Persistent=true
+Unit=technofunda-job@nightly.service
+
+[Install]
+WantedBy=timers.target

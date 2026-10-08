@@ -1,0 +1,10 @@
+[Unit]
+Description=Fundamentals and standalone figures, Saturday morning (IST)
+
+[Timer]
+OnCalendar=Sat 09:00 Asia/Kolkata
+Persistent=true
+Unit=technofunda-job@weekly.service
+
+[Install]
+WantedBy=timers.target

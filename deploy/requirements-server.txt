@@ -1,0 +1,9 @@
+# Only what the server needs. The Windows machine also has OCR packages (rapidocr, onnxruntime, opencv) for the accuracy tools;
+# the live app and the nightly jobs do not need them (a scanned results PDF is simply skipped).
+fastapi
+uvicorn
+pandas
+numpy
+requests
+yfinance
+pdfplumber

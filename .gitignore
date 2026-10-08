@@ -17,3 +17,4 @@ data/*
 .idea/
 Thumbs.db
 *.tmp
+deploy/out/
