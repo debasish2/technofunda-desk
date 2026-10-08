@@ -18,6 +18,7 @@
 .live[hidden]{display:none}
 /* look */
 .ihg{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:6px}
+@media (max-width:600px){.ihg{grid-template-columns:1fr 1fr}.iht{min-height:56px;padding:7px 9px}.iht span{font-size:14px}}
 .iht{display:block;text-decoration:none;color:var(--ink);border-radius:8px;padding:8px 10px;min-height:62px;border:1px solid transparent;overflow:hidden}
 .iht:hover{border-color:var(--ink)}
 .iht b{display:block;font-weight:500;font-size:12.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -55,7 +56,9 @@
 .mbi td:first-child{font-weight:600;min-width:92px}
 .mbi .lv{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--up);color:#fff;font-size:10px;font-weight:700;letter-spacing:.04em;vertical-align:1px}
 .mbi td.g{background:color-mix(in srgb,var(--up) 15%,transparent)}.mbi td.r{background:color-mix(in srgb,var(--down) 15%,transparent)}.mbi td.n{background:none;color:var(--muted)}
-.mbi td.dg{background:color-mix(in srgb,var(--up) 22%,transparent);font-weight:600}.mbi td.dr{background:color-mix(in srgb,var(--down) 22%,transparent);font-weight:600}.mbi td.dw{color:var(--down);font-weight:600}
+.mbi td.dg{background:linear-gradient(color-mix(in srgb,var(--up) 22%,transparent),color-mix(in srgb,var(--up) 22%,transparent)),var(--panel);font-weight:600}.mbi td.dr{background:linear-gradient(color-mix(in srgb,var(--down) 22%,transparent),color-mix(in srgb,var(--down) 22%,transparent)),var(--panel);font-weight:600}
+.mbi td:first-child,.mbi th:first-child{position:sticky;left:0;z-index:1}.mbi td:first-child{background-color:var(--panel)}.mbi thead tr.grp th:first-child{z-index:2}
+.how{margin:0 0 12px}.how summary{cursor:pointer;color:var(--accent);font-weight:500;margin-bottom:6px}.how p{margin:6px 0 0}.mbi td.dw{color:var(--down);font-weight:600}
 .mbi .scroll{overflow-x:auto}
 .mabbody{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;align-items:start}
 .mabtable table{width:100%;border-collapse:collapse}
@@ -119,7 +122,7 @@
   <section class="card mab mbi" id="mbi" hidden>
     <div class="mabhead">
       <div><h2>Market breadth dashboard</h2>
-        <p class="d">One row per session. <b>4R</b> is stocks up 4% or more over stocks down more than 4%, <b>20R</b> and <b>50R</b> are stocks above over stocks below their 20 and 50-day average (all times 100), and each <b>chg</b> is that ratio's change from the day before. <b>52WH / 52WL</b> are the stocks making a new 52-week high or low. Green and red cells follow the usual thresholds (4R above 200 or below 50; 20R above 75 or below 50; 50R above 85 or below 60; changes above +20 or below −20). A day is green when green cells outnumber red by 3 or more, red when red outnumber green by 3 or more; a day with 3 or more red cells that is not red is a <span style="color:var(--down);font-weight:600">warning</span> day.</p></div>
+        <details class="how"><summary>How to read this table</summary><p class="d">One row per session. <b>4R</b> is stocks up 4% or more over stocks down more than 4%, <b>20R</b> and <b>50R</b> are stocks above over stocks below their 20 and 50-day average (all times 100), and each <b>Change</b> is that ratio's change from the day before. <b>New 52-week High / Low</b> are the shares of stocks making a new 52-week high or low. Green and red cells follow the usual thresholds (4R above 200 or below 50; 20R above 75 or below 50; 50R above 85 or below 60; changes above +20 or below −20). A day is green when green cells outnumber red by 3 or more, red when red outnumber green by 3 or more; a day with 3 or more red cells that is not red is a <span style="color:var(--down);font-weight:600">warning</span> day.</p></details></div>
       <div class="mabctl">
         <div class="segc" id="bKind"><button data-k="sma" aria-pressed="true">SMA</button><button data-k="ema" aria-pressed="false">EMA</button></div>
         <div class="segc" id="bThr"><button data-t="4" aria-pressed="true">4%</button><button data-t="4.5" aria-pressed="false">4.5%</button></div>
@@ -288,7 +291,7 @@ function drawMBI(){
   }
   const t4=MB.thr===4.5?'4.5':'4';
   $('#mbiT').innerHTML=`<table><thead><tr class="grp"><th rowspan="2">Date</th><th colspan="2" class="sep">${t4}R</th><th colspan="2" class="sep">20R</th><th colspan="2" class="sep">50R</th><th colspan="2" class="sep" title="Share of traded stocks making a new 52-week high or low">New 52-week</th>${MB.pro?`<th colspan="7" class="sep">More</th>`:''}</tr><tr class="sub"><th class="sep">Value</th><th>Change</th><th class="sep">Value</th><th>Change</th><th class="sep">Value</th><th>Change</th><th class="sep" title="Share of stocks making a new 52-week high">High</th><th title="Share of stocks making a new 52-week low">Low</th>${MB.pro?`<th class="sep">${t4}%+</th><th>${t4}%−</th><th>10+</th><th>20+</th><th>50+</th><th>200+</th><th>Index</th>`:''}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
-  $('#mbiN').textContent=`${D.live?'The top row is provisional (live). ':''}${MB.kind.toUpperCase()} averages · universe: NSE stocks closing at ₹1 or more (about ${nf0.format(D.traded[n-1])} traded on ${dlabel(D.dates[n-1])}). The overall day colour counts the six coloured columns. The EM / XP scores of the TradingView version are not included. 52WH / 52WL are shares of traded stocks; hover for the stock counts.`;
+  $('#mbiN').textContent=`${D.live?'The top row is provisional (live). ':''}${MB.kind.toUpperCase()} averages · universe: NSE stocks closing at ₹1 or more (about ${nf0.format(D.traded[n-1])} traded on ${dlabel(D.dates[n-1])}). The overall day colour counts the six coloured columns. The EM / XP scores of the TradingView version are not included. New 52-week High / Low are shares of traded stocks; hover for the stock counts.`;
 }
 $('#bKind').onclick=e=>{const b=e.target.closest('button');if(!b)return;MB.kind=b.dataset.k;document.querySelectorAll('#bKind button').forEach(x=>x.setAttribute('aria-pressed',x===b));loadMBI()};
 $('#bThr').onclick=e=>{const b=e.target.closest('button');if(!b)return;MB.thr=+b.dataset.t;document.querySelectorAll('#bThr button').forEach(x=>x.setAttribute('aria-pressed',x===b));loadMBI()};

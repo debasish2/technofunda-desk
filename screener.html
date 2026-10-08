@@ -105,6 +105,11 @@ main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:36
   .out{padding:18px 14px 50px}
   .tablebox{max-height:none}
 }
+@media (max-width:600px){   /* the company name is the least useful column on a phone: dropping it brings price, change and RS next to the symbol */
+  .tablebox th:nth-child(2),.tablebox td:nth-child(2){display:none}
+  .tablebox td,.tablebox thead th{padding-left:10px;padding-right:10px}
+  .tablebox td{height:42px}
+}
 </style>
 </head>
 <body>
