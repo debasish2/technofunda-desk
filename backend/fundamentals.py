@@ -85,9 +85,9 @@ def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity
     mcap = last_price * shares_cr if shares_cr else None
     # three-year growth of profit (and so of EPS, as long as the share count has not changed much): the last four quarters against the four
     # quarters that ended three years earlier, both complete, both profitable
-    def four(end):
+    def four(end):                                          # a year of profit; three quarters are scaled up, as in the trailing twelve months above
         w = [q for q in Q if month_end(end, 12) < q["end"] <= end]
-        return sum(q["np"] for q in w) if len(w) == 4 else None
+        return sum(q["np"] for q in w) * 4 / len(w) if len(w) >= 3 else None
     now4, then4 = four(LQ["end"]), four(month_end(LQ["end"], 36))
     cagr3 = ((now4 / then4) ** (1 / 3) - 1) * 100 if now4 and then4 and now4 > 0 and then4 > 0 else None
     fin = kind == "fin"                       # banks / lenders / insurers: no margin, no ROCE (see financials.py)
