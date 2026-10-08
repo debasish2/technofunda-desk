@@ -362,6 +362,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 .rb.mode[aria-pressed=true]{background:var(--soft);color:var(--accent);opacity:1}.rb.mode[aria-pressed=false]{opacity:1}
 .railzone{display:none}
 #toolsBtn{display:none}
+.mob{display:none}
 #toolsBtn[aria-pressed=true]{color:var(--accent)}
 @media (min-width:1101px){
   .app{--rail:0px;grid-template-columns:var(--wl) minmax(0,1fr);grid-template-areas:"head center" "list center"}
@@ -437,8 +438,25 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
   #toolsBtn .tx{display:inline!important}
   .flyout{z-index:80;position:fixed!important;left:10px!important;right:10px!important;top:auto!important;bottom:10px!important;max-height:62vh!important;box-shadow:0 -10px 40px rgba(0,0,0,.45)}
   #legend{max-width:calc(100% - 84px);font-size:11.5px;line-height:1.45}
-  .chartwrap{height:520px}
-  .ctl{padding:8px 10px}
+  .head{padding:6px 10px}.head .search input{height:34px}.head .search{margin:0}
+  .stockhead{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name wl px" "sub tone chg";align-items:center;gap:0 8px;padding:6px 12px 4px}
+  .shl,.shr{display:contents}
+  #openList{display:none!important}
+  #hName{grid-area:name;margin:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #wlBtn{grid-area:wl;width:28px;padding:0;font-size:0;text-align:center}
+  #wlBtn::before{content:'☆';font-size:19px}#wlBtn[aria-pressed=true]::before{content:'★'}
+  #hPx{grid-area:px;font-size:22px;justify-self:end}
+  #hSub{grid-area:sub;font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #tone{grid-area:tone;margin:0}
+  #hMeta{grid-area:chg;margin:0;justify-self:end}
+  #hBadge{grid-column:1/-1;grid-row:3}
+  .ctl{padding:5px 8px;gap:5px}
+  .ctl .tg,.ctl .ddb{padding:5px 9px;font-size:13px}
+  .ctl .ddb i{display:none}
+  #indBtn i{display:none}
+  #grBtn,#inBtn,#tbBtn,#patBtn{display:none}
+  .mob{display:block}
+  .chartwrap{height:calc(100vh - 168px);height:calc(100dvh - 168px);min-height:430px}
   #panel{padding:12px}
   .tabs button{padding:14px 12px}
 }
@@ -586,6 +604,10 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
             <label><input type="checkbox" id="sVol" checked> Volume</label>
             <button class="tg row" id="vcBtn" aria-pressed="false" title="Mark the pullbacks of a volatility contraction pattern and its pivot, when the stock has one">VCP: contractions and pivot</button>
             <button class="tg row" id="vpBtn" aria-pressed="false" title="Where the volume in the bars on screen was traded, drawn along the right edge">Volume profile (visible range)</button>
+            <button class="tg row mob" data-proxy="grBtn" aria-pressed="false">Result grades on the chart</button>
+            <button class="tg row mob" data-proxy="inBtn" aria-pressed="false">Insider trades on the chart</button>
+            <button class="tg row mob" data-proxy="tbBtn" aria-pressed="false">Table of recent bars</button>
+            <button class="tg row mob" data-proxy="patBtn" aria-pressed="false">Consolidation patterns</button>
             <button class="tg row" id="snapBtn">Save chart image (PNG)</button>
             <button class="tg row" id="tvBtn" aria-pressed="false" title="Draw the chart with TradingView's free Lightweight Charts library">TradingView chart</button>
             <label>Capital ₹ <input type="number" id="sCap" min="0" step="10000" style="width:96px"></label>
@@ -2518,7 +2540,8 @@ syncPal();
 seg('ivSeg','iv','iv');seg('tySeg','ty','type');seg('rgSeg','rg','range');
 function toggle(id,key,after){$('#'+id).addEventListener('click',e=>{st[key]=!st[key];e.currentTarget.setAttribute('aria-pressed',st[key]);(after||draw)()})}
 toggle('logBtn','log');toggle('patBtn','pat');toggle('grBtn','grades');toggle('inBtn','insider');toggle('tbBtn','table',()=>{renderTable();draw()});
-$('#setBtn').addEventListener('click',e=>{syncPal();const p=$('#pop');p.hidden=!p.hidden;e.currentTarget.setAttribute('aria-expanded',!p.hidden)});
+$$('[data-proxy]').forEach(b=>b.addEventListener('click',()=>{$('#'+b.dataset.proxy).click();b.setAttribute('aria-pressed',$('#'+b.dataset.proxy).getAttribute('aria-pressed'))}));
+$('#setBtn').addEventListener('click',e=>{$$('[data-proxy]').forEach(b=>b.setAttribute('aria-pressed',$('#'+b.dataset.proxy).getAttribute('aria-pressed')));syncPal();const p=$('#pop');p.hidden=!p.hidden;e.currentTarget.setAttribute('aria-expanded',!p.hidden)});
 [['sVol','vol']].forEach(([id,k])=>$('#'+id).addEventListener('change',e=>{st[k]=e.target.checked;draw()}));
 document.addEventListener('click',e=>{if(!e.target.closest('.popwrap')){$('#pop').hidden=true;$('#setBtn').setAttribute('aria-expanded',false)}if(!e.target.closest('.search'))$('#results').hidden=true});
 $('#tvBtn').addEventListener('click',()=>setEngine(st.engine==='tv'?'canvas':'tv'));
