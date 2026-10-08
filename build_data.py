@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build data.js for Dalal Desk (setup-desk.html).
+"""Build data.js for TechnoFunda Desk (setup-desk.html).
 
 Setup
     pip install yfinance pandas
@@ -182,7 +182,7 @@ def build(sym, sector, years):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Build data.js for Dalal Desk")
+    ap = argparse.ArgumentParser(description="Build data.js for TechnoFunda Desk")
     ap.add_argument("symbols", help="text file with one NSE symbol per line")
     ap.add_argument("--out", default="data.js")
     ap.add_argument("--years", type=int, default=4)

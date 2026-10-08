@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from . import db, quality
 
 ROOT = Path(__file__).resolve().parent.parent
-app = FastAPI(title="Dalal Desk")
+app = FastAPI(title="TechnoFunda Desk")
 app.add_middleware(GZipMiddleware, minimum_size=1200)       # the price history and screener results are large JSON
 app.mount("/vendor", StaticFiles(directory=ROOT / "vendor"), name="vendor")      # third-party libraries, kept local
 

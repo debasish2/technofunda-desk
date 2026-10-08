@@ -32,9 +32,9 @@ $weekdays = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday, Tuesday, Wednes
 $saturday = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Saturday -At $WeeklyAt
 
 Register-ScheduledTask -TaskName "SetupDesk Nightly" -Action $nightly -Trigger $weekdays -Settings $settings -Force `
-    -Description "Dalal Desk: reload prices for the whole NSE market" | Out-Null
+    -Description "TechnoFunda Desk: reload prices for the whole NSE market" | Out-Null
 Register-ScheduledTask -TaskName "SetupDesk Weekly" -Action $weekly -Trigger $saturday -Settings $settings -Force `
-    -Description "Dalal Desk: prices plus fundamentals refresh" | Out-Null
+    -Description "TechnoFunda Desk: prices plus fundamentals refresh" | Out-Null
 
 Get-ScheduledTask -TaskName $names | Select-Object TaskName, State | Format-Table -AutoSize
 Write-Host "Registered. Check the last run any time:  http://localhost:8000/api/status  or  data\nightly.log"

@@ -1,4 +1,4 @@
-# Dalal Desk
+# TechnoFunda Desk
 
 A personal Indian stock screener and chart desk, built on free data only (NSE and BSE filings, Yahoo Finance).
 Pages: **Desk** (chart, fundamentals, research panel), **Screener**, **Market breadth**, **Industries**.

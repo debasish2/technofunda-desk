@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dalal Desk</title>
+<title>TechnoFunda Desk</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f4fe0'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -494,7 +494,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 <div class="app" id="app">
   <div class="railzone" id="railzone" title="Menu: Chart, Research and the other pages"></div>
   <header class="top">
-    <div class="brand" title="Dalal Desk">DD</div>
+    <div class="brand" title="TechnoFunda Desk">TD</div>
     <button class="rb icon" id="menuBtn" aria-label="Show stock list"><span class="lb">☰</span></button>
     <button class="rb" id="tgSearch" hidden title="Search companies ( / )"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="5.5"/><path d="M13.2 13.2L17 17"/></svg><span class="lb">Search</span></button>
     <button class="rb vt" id="tgList" hidden aria-pressed="true" title="Show or hide the stock list"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="12" rx="1.5"/><path d="M8 4v12"/></svg><span class="lb">List</span></button>
@@ -637,7 +637,7 @@ const FONT="'Inter',system-ui,sans-serif";
 if(location.protocol==='file:'&&!/[?&]nr=1/.test(location.search)){        // (add ?nr=1 to skip the redirect, for testing)                       // Screener, Breadth and the real data all come from the local server
   const go=()=>location.replace('http://localhost:8000/');
   fetch('http://localhost:8000/api/status',{mode:'no-cors'}).then(go).catch(()=>{
-    document.body.insertAdjacentHTML('afterbegin','<div style="position:fixed;z-index:999;left:0;right:0;top:0;padding:12px 18px;background:#b4232c;color:#fff;font:14px system-ui">The Dalal Desk server is not running, so the Screener, Breadth and your real data are unavailable. Double-click <b>start-desk.bat</b> in the project folder; it starts the server and opens this page.</div>')});
+    document.body.insertAdjacentHTML('afterbegin','<div style="position:fixed;z-index:999;left:0;right:0;top:0;padding:12px 18px;background:#b4232c;color:#fff;font:14px system-ui">The TechnoFunda Desk server is not running, so the Screener, Breadth and your real data are unavailable. Double-click <b>start-desk.bat</b> in the project folder; it starts the server and opens this page.</div>')});
 }
 const store={get(){try{return JSON.parse(localStorage.getItem('setupdesk.v1')||'{}')}catch(e){return {}}},set(o){try{localStorage.setItem('setupdesk.v1',JSON.stringify(o))}catch(e){}}};
 const prefs=Object.assign({theme:null,watch:[],draw:{},sym:null},store.get());
