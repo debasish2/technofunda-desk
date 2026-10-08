@@ -11,6 +11,16 @@ def bars(sym, years=4):
              round(float(r.Low), 2), round(float(r.Close), 2), int(r.Volume)) for i, r in df.iterrows()]
 
 
+def annual_profit(tk):
+    """Net profit of the last four financial years (rupee crore, newest first) as 'a,b,c,d', or None."""
+    try:
+        st = tk.income_stmt
+        r = (st.loc["Net Income Common Stockholders"] if "Net Income Common Stockholders" in st.index else st.loc["Net Income"]).dropna()
+        return ",".join(str(round(float(x) / CR, 1)) for x in r.values[:4]) if len(r) >= 2 else None
+    except Exception:
+        return None
+
+
 def profile(sym, tk=None, info=None):
     tk = tk or yf.Ticker(sym + ".NS")
     info = info if info is not None else (tk.info or {})
@@ -28,7 +38,7 @@ def profile(sym, tk=None, info=None):
     if info.get("financialCurrency") not in (None, "INR"):      # e.g. Infosys reports its balance sheet in USD
         cap = eq = debt = None
     return {"name": info.get("longName") or sym, "shares_cr": (info.get("sharesOutstanding") or 0) / CR,
-            "cap_employed": cap, "equity": eq, "debt": debt, "industry": info.get("industry")}
+            "cap_employed": cap, "equity": eq, "debt": debt, "np_annual": annual_profit(tk), "industry": info.get("industry")}
 
 
 def quarters(sym):

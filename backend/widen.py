@@ -87,8 +87,8 @@ def stage1(top):
             if prof is None:
                 skipped[sym] = why
                 continue
-            con.execute("INSERT OR REPLACE INTO stock(sym,name,sector,shares_cr,cap_employed,equity,debt,updated,desk) VALUES(?,?,?,?,?,?,?,?,0)",
-                        (sym, prof["name"], prof["industry"], prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"],
+            con.execute("INSERT OR REPLACE INTO stock(sym,name,sector,shares_cr,cap_employed,equity,debt,np_annual,updated,desk) VALUES(?,?,?,?,?,?,?,?,?,0)",
+                        (sym, prof["name"], prof["industry"], prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"], prof["np_annual"],
                          datetime.now().isoformat(timespec="seconds")))
             stitch.apply_rows(sym, rows, "", con)
             done += 1
@@ -151,8 +151,8 @@ def refresh_yahoo():
             if prof is None:
                 bad += 1
                 continue
-            con.execute("UPDATE stock SET shares_cr=?, cap_employed=?, equity=?, debt=?, updated=? WHERE sym=?",
-                        (prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"], datetime.now().isoformat(timespec="seconds"), sym))
+            con.execute("UPDATE stock SET shares_cr=?, cap_employed=?, equity=?, debt=?, np_annual=?, updated=? WHERE sym=?",
+                        (prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"], prof["np_annual"], datetime.now().isoformat(timespec="seconds"), sym))
             stitch.apply_rows(sym, rows, "", con)
             ok += 1
     con.commit()
@@ -195,8 +195,37 @@ def backfill_debt(log=print):
     log(f"debt stored for {done} stocks; {none} have no balance sheet at Yahoo")
 
 
+def backfill_annual_profit(log=print):
+    """One pass over every stock (banks and lenders too) that has no annual-profit figures yet."""
+    con = db.connect()
+    syms = [r["sym"] for r in con.execute("SELECT sym FROM stock WHERE np_annual IS NULL ORDER BY sym")]
+    log(f"annual profit for {len(syms)} stocks, {WORKERS} at a time")
+    done = none = 0
+    t0 = time.time()
+    with ThreadPoolExecutor(WORKERS) as ex:
+        futs = {ex.submit(lambda s: (s, retry(lambda: yahoo.annual_profit(yf.Ticker(s + ".NS")))), sym): sym for sym in syms}
+        for f in as_completed(futs):
+            try:
+                sym, v = f.result()
+            except Exception:
+                none += 1
+                continue
+            if not v:
+                none += 1
+                continue
+            con.execute("UPDATE stock SET np_annual=? WHERE sym=?", (v, sym))
+            done += 1
+            if done % 200 == 0:
+                con.commit()
+                log(f"  {done} done ({(time.time() - t0) / 60:.1f} min)")
+    con.commit()
+    log(f"annual profit stored for {done}; {none} have none at Yahoo")
+
+
 if __name__ == "__main__":
-    if "--debt" in sys.argv:
+    if "--annual" in sys.argv:
+        backfill_annual_profit()
+    elif "--debt" in sys.argv:
         backfill_debt()
     elif "--history" in sys.argv:
         stage2()

@@ -19,8 +19,8 @@ def read_symbols(path):
 
 def refresh(sym, sector, con, pdf=True):
     prof = yahoo.profile(sym)
-    con.execute("INSERT OR REPLACE INTO stock(sym,name,sector,shares_cr,cap_employed,equity,debt,updated) VALUES(?,?,?,?,?,?,?,?)",
-                (sym, prof["name"], sector or prof["industry"], prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"],
+    con.execute("INSERT OR REPLACE INTO stock(sym,name,sector,shares_cr,cap_employed,equity,debt,np_annual,updated) VALUES(?,?,?,?,?,?,?,?,?)",
+                (sym, prof["name"], sector or prof["industry"], prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"], prof["np_annual"],
                  datetime.now().isoformat(timespec="seconds")))
     b = yahoo.bars(sym)
     con.executemany("INSERT OR REPLACE INTO bar VALUES(?,?,?,?,?,?,?)", [(sym, *x) for x in b])

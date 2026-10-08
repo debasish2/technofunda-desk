@@ -55,6 +55,8 @@ def connect():
         con.execute("ALTER TABLE stock ADD COLUMN kind TEXT DEFAULT 'corp'")   # 'fin' = bank / lender / insurer
     if "debt" not in [r[1] for r in con.execute("PRAGMA table_info(stock)")]:
         con.execute("ALTER TABLE stock ADD COLUMN debt REAL")                 # total debt in rupee crore (Yahoo's definition, leases included)
+    if "np_annual" not in [r[1] for r in con.execute("PRAGMA table_info(stock)")]:
+        con.execute("ALTER TABLE stock ADD COLUMN np_annual TEXT")           # net profit of the last four financial years, newest first, rupee crore, comma-separated
     if "desk" not in [r[1] for r in con.execute("PRAGMA table_info(stock)")]:
         con.execute("ALTER TABLE stock ADD COLUMN desk INTEGER DEFAULT 1")   # 1 = charted on the Desk, 0 = screener only
     return con
