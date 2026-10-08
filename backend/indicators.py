@@ -209,6 +209,8 @@ def snapshot(data=None):
     t = len(C) - 1
     last = C.iloc[t]
     row = lambda m: m.iloc[t]
+    d = C.diff()                                           # Wilder's RSI, 14 sessions
+    rsi = 100 - 100 / (1 + d.clip(lower=0).ewm(alpha=1 / 14, adjust=False, min_periods=14).mean() / (-d.clip(upper=0)).ewm(alpha=1 / 14, adjust=False, min_periods=14).mean())
     rising200 = s200.iloc[t] > s200.iloc[t - 22]
     template = pd.DataFrame({
         "t1": (last > row(s150)) & (last > row(s200)),
@@ -249,6 +251,8 @@ def snapshot(data=None):
         "rs": rs_now, "rs1m": row(rs1m), "rs3m": row(rs3m), "rs6m": row(rs6m), "rs12m": row(rs12m),
         "vs500_55": ((C.iloc[t] / C.iloc[t - 55] - 1) - (idx.iloc[t] / idx.iloc[t - 55] - 1)) * 100,
         "vs500_123": ((C.iloc[t] / C.iloc[t - 123] - 1) - (idx.iloc[t] / idx.iloc[t - 123] - 1)) * 100,
+        "vs500_252": ((C.iloc[t] / C.iloc[t - 252] - 1) - (idx.iloc[t] / idx.iloc[t - 252] - 1)) * 100,
+        "rsi14": row(rsi),
         "mansfield": row(mansfield),
         "rs_high": row(line) >= 0.999 * row(line_hi),
         "emerging": (rs_now >= 70) & (rs_63 < 70) & (last > row(e50)),
@@ -375,7 +379,7 @@ FIELDS = [
                  "below_ema50": "Below EMA 50", "below_ema200": "Below EMA 200"}},
     {"group": "Trend & moving averages", "id": "ma_order", "label": "Moving-average order", "type": "choice",
      "options": {"ema20_50_200": "EMA 20 > EMA 50 > EMA 200", "sma50_150_200": "SMA 50 > SMA 150 > SMA 200",
-                 "ema20_50": "EMA 20 > EMA 50", "ema50_200": "EMA 50 > EMA 200"}},
+                 "ema20_50": "EMA 20 > EMA 50", "ema50_200": "EMA 50 > EMA 200", "sma50_200": "SMA 50 > SMA 200"}},
     {"group": "Trend & moving averages", "id": "stage", "label": "Weinstein stage", "type": "choice",
      "options": {"1": "Stage 1 - basing", "2": "Stage 2 - advancing", "3": "Stage 3 - topping", "4": "Stage 4 - declining"}},
     {"group": "Trend & moving averages", "id": "template", "label": "Minervini trend template: at least", "type": "count", "of": 5,
@@ -392,6 +396,14 @@ FIELDS = [
     {"group": "Relative strength", "id": "vs500_55", "label": "vs Nifty 500, 55 days >", "type": "min", "unit": "%",
      "help": "Stock's 55-session return minus the Nifty 500's, in percentage points."},
     {"group": "Relative strength", "id": "vs500_123", "label": "vs Nifty 500, 123 days >", "type": "min", "unit": "%"},
+    {"group": "Relative strength", "id": "vs500_252", "label": "vs Nifty 500, 252 days >", "type": "min", "unit": "%",
+     "help": "Stock's 12-month return minus the Nifty 500's, in percentage points. 0 keeps stocks that beat the index."},
+    {"group": "Relative strength", "id": "rsi14", "label": "RSI (14) >=", "type": "min",
+     "help": "Wilder's relative strength index on daily closes. 55 and above means the last two weeks of buying outweighed the selling."},
+    {"group": "Size & price", "id": "min_mcap", "label": "Market cap >=", "type": "min", "unit": "Rs Cr",
+     "help": "Market capitalisation from BSE's listing data, in rupee crore."},
+    {"group": "Size & price", "id": "near_high", "label": "Within this % of the 52-week high", "type": "max", "unit": "%",
+     "help": "How far the close is below the highest high of the last 252 sessions, in percent. 15 keeps stocks no more than 15% under their high."},
     {"group": "Relative strength", "id": "mansfield", "label": "Mansfield RS >", "type": "min", "unit": "%",
      "help": "(stock / Nifty 500) against its own 252-session average, in percent."},
     {"group": "Relative strength", "id": "rs_high", "label": "RS line at a new high", "type": "flag",
@@ -427,14 +439,14 @@ def apply(snap, filters):
     """filters: {field_id: value}. Returns the matching rows, strongest RS first."""
     m = pd.Series(True, index=snap.index)
     for fid, v in filters.items():
-        if v in (None, "", False):
+        if v is None or v == "" or v is False:                 # 0 is a real threshold (beat the index), not "off"
             continue
         if fid == "price_ma":
             kind, col = v.split("_", 1)
             m &= (snap["last"] > snap[col]) if kind == "above" else (snap["last"] < snap[col])
         elif fid == "ma_order":
             cols = {"ema20_50_200": ["ema20", "ema50", "ema200"], "sma50_150_200": ["sma50", "sma150", "sma200"],
-                    "ema20_50": ["ema20", "ema50"], "ema50_200": ["ema50", "ema200"]}[v]
+                    "ema20_50": ["ema20", "ema50"], "ema50_200": ["ema50", "ema200"], "sma50_200": ["sma50", "sma200"]}[v]
             for a, b in zip(cols, cols[1:]):
                 m &= snap[a] > snap[b]
         elif fid == "stage":
@@ -446,8 +458,14 @@ def apply(snap, filters):
         elif fid in ("rs", "rs1m", "rs3m", "rs6m", "rs12m"):
             lo, hi = v if isinstance(v, (list, tuple)) else (v, 99)
             m &= snap[fid].between(float(lo or 1), float(hi or 99))
-        elif fid in ("vs500_55", "vs500_123", "mansfield", "momentum"):
+        elif fid in ("vs500_55", "vs500_123", "vs500_252", "mansfield", "momentum"):
             m &= snap[fid] > float(v)
+        elif fid == "rsi14":
+            m &= snap["rsi14"] >= float(v)
+        elif fid == "min_mcap":
+            m &= snap["mcap"] >= float(v)
+        elif fid == "near_high":
+            m &= snap["high52_pct"] >= -float(v)
         elif fid == "consol_bars":
             m &= snap["consol_bars"] >= max(float(v), 1)
         elif fid == "consol_range":

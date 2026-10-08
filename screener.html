@@ -195,7 +195,9 @@ const PRESETS=[
  {name:'Tight bases in leaders',set:{stage:'2',rs:[80,99],consol_active:true,consol_range:12}},
  {name:'VCP setups in leaders',set:{stage:'2',rs:[80,99],vcp:'any'}},
  {name:'Fresh breakouts from a base',set:{consol_breakout:true,stage:'2',rs:[70,99]}},
- {name:'Accelerating earnings + RS leaders',set:{earn_momentum:'Accelerating',opm_expanding:true,rs:[80,99],rs_high:true}}];
+ {name:'Accelerating earnings + RS leaders',set:{earn_momentum:'Accelerating',opm_expanding:true,rs:[80,99],rs_high:true}},
+ {name:'Super growth scan',set:{min_mcap:500,profit_yoy:20,sales_yoy:15,profit_cagr3:15,roce:15,de:1,price_ma:'above_sma50',ma_order:'sma50_200',near_high:15,vs500_252:0,rsi14:55}},
+ {name:'Techno Funda',set:{min_mcap:1000,profit_yoy:20,profit_cagr3:15,near_high:15,vs500_252:3,pe:50}}];
 function applyPreset(set){
   $('#clear').click();
   for(const [id,v] of Object.entries(set)){
@@ -215,14 +217,15 @@ const C={sym:['sym','Symbol'],name:['name','Name'],last:['last','Price',v=>nf2.f
  consol_bars:['consol_bars','Base',v=>v?nf0.format(v)+' bars':'–'],consol_range:['consol_range','Box range',v=>nf1.format(v)+'%'],consol_breakout:['consol_breakout','Breakout',v=>v?'<span class="tag up">Yes</span>':'–'],
  vcp_status:['vcp_status','VCP',v=>v?`<span class="tag ${v==='breakout'?'up':''}">${esc(v)}</span>`:'–'],vcp_n:['vcp_n','Pullbacks',v=>nf0.format(v)],vcp_last:['vcp_last','Last pullback',v=>nf1.format(v)+'%'],
  industry:['industry','Industry',v=>v?esc(v):'–'],sector:['sector','Sector',v=>v?esc(v):'–'],ind_3m:['ind_3m','Ind. 3M',v=>(v>=0?'+':'')+nf1.format(v)+'%'],ind_rank_3m:['ind_rank_3m','Ind. rank',v=>'#'+nf0.format(v)],
- high52_pct:['high52_pct','From 52w high',v=>nf1.format(v)+'%'],value_cr:['value_cr','Traded ₹Cr',v=>nf0.format(v)]};
-const COLGROUPS={trend:['Trend & strength',['template','supertrend','sar','mansfield','vs500_55','momentum','high52_pct']],
+ high52_pct:['high52_pct','From 52w high',v=>nf1.format(v)+'%'],mcap:['mcap','Mkt cap ₹Cr',v=>nf0.format(v)],rsi14:['rsi14','RSI 14',v=>nf0.format(v)],
+ vs500_252:['vs500_252','vs N500 12m',v=>(v>=0?'+':'')+nf1.format(v)+'%'],value_cr:['value_cr','Traded ₹Cr',v=>nf0.format(v)]};
+const COLGROUPS={trend:['Trend & strength',['template','supertrend','sar','mansfield','vs500_55','vs500_252','rsi14','momentum','high52_pct','mcap']],
  patterns:['Base & VCP patterns',['consol_bars','consol_range','consol_breakout','vcp_status','vcp_n','vcp_last']],
  industry:['Industry detail',['sector','ind_3m']],fund:['Quarterly results',null]};
 let colOn={trend:false,patterns:false,industry:false,fund:true};
 try{Object.assign(colOn,JSON.parse(localStorage.getItem('setupdesk.scrcols')||'{}'))}catch(e){}
 const FCOLS=[['grade','Result',v=>`<span class="tag ${GRADE[v]||''}">${esc(v)}</span>`],['sales_yoy','Sales YoY',v=>nf1.format(v)+'%'],
- ['profit_yoy','Profit YoY',v=>nf1.format(v)+'%'],['opm_ttm','OPM 12m',v=>nf1.format(v)+'%'],['pe','PE',v=>nf1.format(v)+'x'],['pb','P/B',v=>nf1.format(v)+'x'],['gnpa_pct','GNPA',v=>nf2.format(v)+'%'],['pledge_pct','Pledge',v=>nf1.format(v)+'%'],['insider_net','Insider ₹Cr',v=>(v>=0?'+':'')+nf2.format(v)],['roce','ROCE',v=>nf1.format(v)+'%']];
+ ['profit_yoy','Profit YoY',v=>nf1.format(v)+'%'],['opm_ttm','OPM 12m',v=>nf1.format(v)+'%'],['pe','PE',v=>nf1.format(v)+'x'],['pb','P/B',v=>nf1.format(v)+'x'],['gnpa_pct','GNPA',v=>nf2.format(v)+'%'],['pledge_pct','Pledge',v=>nf1.format(v)+'%'],['insider_net','Insider ₹Cr',v=>(v>=0?'+':'')+nf2.format(v)],['roce','ROCE',v=>nf1.format(v)+'%'],['de','D/E',v=>nf2.format(v)+'x'],['profit_cagr3','Profit 3y CAGR',v=>nf1.format(v)+'%']];
 let fundUsed=false;
 function buildCols(){
   const c=[C.sym,C.name,C.last,C.chg];

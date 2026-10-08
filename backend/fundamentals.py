@@ -40,7 +40,7 @@ def grade_of(q, y):
     return "Trash"
 
 
-def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity, kind="corp"):
+def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity, kind="corp", debt=None):
     """quarters: list of dicts (end, sales, op, np), any order. Returns a metrics dict, or None if unusable."""
     Q = sorted(quarters, key=lambda q: q["end"])
     if len(Q) < 5:
@@ -83,6 +83,13 @@ def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity
     ttm = lambda f: sum(q[f] for q in W) * k
     ttm_np, ttm_op, ttm_s = ttm("np"), ttm("op"), ttm("sales")
     mcap = last_price * shares_cr if shares_cr else None
+    # three-year growth of profit (and so of EPS, as long as the share count has not changed much): the last four quarters against the four
+    # quarters that ended three years earlier, both complete, both profitable
+    def four(end):
+        w = [q for q in Q if month_end(end, 12) < q["end"] <= end]
+        return sum(q["np"] for q in w) if len(w) == 4 else None
+    now4, then4 = four(LQ["end"]), four(month_end(LQ["end"], 36))
+    cagr3 = ((now4 / then4) ** (1 / 3) - 1) * 100 if now4 and then4 and now4 > 0 and then4 > 0 else None
     fin = kind == "fin"                       # banks / lenders / insurers: no margin, no ROCE (see financials.py)
     stale = (date.fromisoformat(last_bar_date) - date.fromisoformat(LQ["end"])).days > 200
     return {
@@ -102,6 +109,8 @@ def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity
         "pb": (mcap / equity) if (mcap and equity and equity > 0) else None, "is_fin": fin,
         "roe": (ttm_np / equity * 100) if equity and equity > 0 and not oneoff else None,
         "oneoff": oneoff,
+        "profit_cagr3": cagr3,
+        "de": None if fin or debt is None or not equity or equity <= 0 else debt / equity,
         "profitable": ttm_np > 0,
     }
 
@@ -122,7 +131,7 @@ def snapshot(con=None):
             "SELECT qend, sales, op, np FROM quarter WHERE sym=? AND flags='' AND sales IS NOT NULL AND op IS NOT NULL "
             "AND np IS NOT NULL ORDER BY qend", (s["sym"],))]
         try:
-            m = analyse(qs, bar["c"], bar["d"], s["shares_cr"], s["cap_employed"], s["equity"], s["kind"] or "corp")
+            m = analyse(qs, bar["c"], bar["d"], s["shares_cr"], s["cap_employed"], s["equity"], s["kind"] or "corp", s["debt"])
         except (ZeroDivisionError, ValueError, TypeError, KeyError):
             m = None
         if m:
@@ -190,6 +199,10 @@ FIELDS = [
     {"group": "Fundamentals", "id": "profitable", "label": "Profitable over the last 12 months", "type": "flag", "fundamental": True},
     {"group": "Fundamentals", "id": "pe", "label": "PE <", "type": "max", "unit": "x", "fundamental": True,
      "help": "Market cap over the last 12 months' net profit. Loss-makers have no PE and never pass this filter."},
+    {"group": "Fundamentals", "id": "profit_cagr3", "label": "Profit growth, 3-year CAGR >", "type": "min", "unit": "%", "fundamental": True,
+     "help": "Net profit of the last four quarters against the four quarters that ended three years earlier, per year. Per-share growth (EPS) is the same unless the share count changed a lot."},
+    {"group": "Fundamentals", "id": "de", "label": "Debt / equity <", "type": "max", "unit": "x", "fundamental": True,
+     "help": "Total debt over shareholders' equity from the latest annual balance sheet (Yahoo Finance). Lease liabilities are counted, so it reads a little higher than a borrowings-only ratio."},
     {"group": "Fundamentals", "id": "roce", "label": "ROCE >", "type": "min", "unit": "%", "fundamental": True,
      "help": "0.8 x 12-month operating profit over capital employed (total assets less current liabilities)."},
     {"group": "Fundamentals", "id": "pb", "label": "Price / book <", "type": "max", "unit": "x", "fundamental": True,
@@ -212,7 +225,7 @@ def apply(fund, filters):
     """Rows of `fund` passing every fundamental filter in `filters` (stale results never pass)."""
     m = ~fund["stale"]
     for fid, v in filters.items():
-        if fid not in FUND_IDS or v in (None, "", False):
+        if fid not in FUND_IDS or v is None or v == "" or v is False:      # 0 is a real threshold (promoter change above 0), not "off"
             continue
         if fid == "grade":
             g = fund["grade"]
@@ -231,7 +244,7 @@ def apply(fund, filters):
             m &= fund["checked"].isin(["f", "m"])
         elif fid == "profit_yoy":                              # a loss turning into a profit passes any growth bar
             m &= (fund["profit_yoy"].notna() & (fund["profit_yoy"] > float(v))) | (fund["profit_state"] == "loss_to_profit")
-        elif fid in ("pb", "gnpa_pct", "nnpa_pct", "pledge_pct"):
+        elif fid in ("pb", "gnpa_pct", "nnpa_pct", "pledge_pct", "de"):
             m &= fund[fid].notna() & (fund[fid] < float(v))
         elif fid == "pe":
             m &= fund["pe"].notna() & (fund["pe"] < float(v))

@@ -133,7 +133,7 @@ def token():
 def enrich(snap, data):
     """The snapshot plus each stock's four industry names and how its industry (NSE 'industry' tier) has done:
     ind_1w / ind_1m / ind_3m returns and ind_rank_1m / ind_rank_3m (1 = best of ind_groups ranked industries)."""
-    base = snap.drop(columns=[c for c in snap.columns if c in ("macro", "sector", "industry", "basic") or c.startswith("ind_")])
+    base = snap.drop(columns=[c for c in snap.columns if c in ("macro", "sector", "industry", "basic", "mcap") or c.startswith("ind_")])
     try:
         cl = classes()
         rows = pd.DataFrame(groups(data, "industry", 500, 3, "mean", base["rs"] if "rs" in base else None))
@@ -147,7 +147,7 @@ def enrich(snap, data):
     per = pd.DataFrame({"ind_1w": cl["industry"].map(rows["1w"]), "ind_1m": cl["industry"].map(rows["1m"]), "ind_3m": cl["industry"].map(rows["3m"]),
                         "ind_rank_1m": cl["industry"].map(rows["ind_rank_1m"]), "ind_rank_3m": cl["industry"].map(rows["ind_rank_3m"])}, index=cl.index)
     per["ind_groups"] = float(len(rows))
-    out = base.join(cl[["macro", "sector", "industry", "basic"]], how="left").join(per, how="left")
+    out = base.join(cl[["macro", "sector", "industry", "basic", "mcap"]], how="left").join(per, how="left")
     return out
 
 

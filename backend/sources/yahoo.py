@@ -14,20 +14,21 @@ def bars(sym, years=4):
 def profile(sym, tk=None, info=None):
     tk = tk or yf.Ticker(sym + ".NS")
     info = info if info is not None else (tk.info or {})
-    cap = eq = None
+    cap = eq = debt = None
     try:
         bs = tk.balance_sheet
         col = bs.columns[0]
         g = lambda *ns: next((float(bs.loc[n, col]) / CR for n in ns if n in bs.index and not pd.isna(bs.loc[n, col])), None)
         ta, cl = g("Total Assets"), g("Current Liabilities")
         eq = g("Stockholders Equity", "Common Stock Equity")
+        debt = g("Total Debt")
         cap = ta - cl if ta is not None and cl is not None else None
     except Exception:
         pass
     if info.get("financialCurrency") not in (None, "INR"):      # e.g. Infosys reports its balance sheet in USD
-        cap = eq = None
+        cap = eq = debt = None
     return {"name": info.get("longName") or sym, "shares_cr": (info.get("sharesOutstanding") or 0) / CR,
-            "cap_employed": cap, "equity": eq, "industry": info.get("industry")}
+            "cap_employed": cap, "equity": eq, "debt": debt, "industry": info.get("industry")}
 
 
 def quarters(sym):

@@ -87,8 +87,8 @@ def stage1(top):
             if prof is None:
                 skipped[sym] = why
                 continue
-            con.execute("INSERT OR REPLACE INTO stock(sym,name,sector,shares_cr,cap_employed,equity,updated,desk) VALUES(?,?,?,?,?,?,?,0)",
-                        (sym, prof["name"], prof["industry"], prof["shares_cr"], prof["cap_employed"], prof["equity"],
+            con.execute("INSERT OR REPLACE INTO stock(sym,name,sector,shares_cr,cap_employed,equity,debt,updated,desk) VALUES(?,?,?,?,?,?,?,?,0)",
+                        (sym, prof["name"], prof["industry"], prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"],
                          datetime.now().isoformat(timespec="seconds")))
             stitch.apply_rows(sym, rows, "", con)
             done += 1
@@ -151,16 +151,54 @@ def refresh_yahoo():
             if prof is None:
                 bad += 1
                 continue
-            con.execute("UPDATE stock SET shares_cr=?, cap_employed=?, equity=?, updated=? WHERE sym=?",
-                        (prof["shares_cr"], prof["cap_employed"], prof["equity"], datetime.now().isoformat(timespec="seconds"), sym))
+            con.execute("UPDATE stock SET shares_cr=?, cap_employed=?, equity=?, debt=?, updated=? WHERE sym=?",
+                        (prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"], datetime.now().isoformat(timespec="seconds"), sym))
             stitch.apply_rows(sym, rows, "", con)
             ok += 1
     con.commit()
     return ok, bad
 
 
+def backfill_debt(log=print):
+    """One pass over every stock that has no debt figure yet: Yahoo's latest balance sheet gives total debt (and refreshes equity)."""
+    import pandas as pd
+    con = db.connect()
+    syms = [r["sym"] for r in con.execute("SELECT sym FROM stock WHERE debt IS NULL AND COALESCE(kind,'corp')='corp' ORDER BY sym")]
+    log(f"debt for {len(syms)} stocks, {WORKERS} at a time")
+
+    def one(sym):
+        tk = yf.Ticker(sym + ".NS")
+        bs = retry(lambda: tk.balance_sheet)
+        if bs is None or bs.empty:
+            return sym, None, None
+        col = bs.columns[0]
+        g = lambda *ns: next((float(bs.loc[n, col]) / 1e7 for n in ns if n in bs.index and not pd.isna(bs.loc[n, col])), None)
+        return sym, g("Total Debt"), g("Stockholders Equity", "Common Stock Equity")
+    done = none = 0
+    t0 = time.time()
+    with ThreadPoolExecutor(WORKERS) as ex:
+        for f in as_completed([ex.submit(one, s) for s in syms]):
+            try:
+                sym, debt, eq = f.result()
+            except Exception:
+                none += 1
+                continue
+            if debt is None:
+                none += 1
+                continue
+            con.execute("UPDATE stock SET debt=?, equity=COALESCE(equity, ?) WHERE sym=?", (debt, eq, sym))
+            done += 1
+            if done % 100 == 0:
+                con.commit()
+                log(f"  {done} done, {none} without a balance sheet ({(time.time() - t0) / 60:.1f} min)")
+    con.commit()
+    log(f"debt stored for {done} stocks; {none} have no balance sheet at Yahoo")
+
+
 if __name__ == "__main__":
-    if "--history" in sys.argv:
+    if "--debt" in sys.argv:
+        backfill_debt()
+    elif "--history" in sys.argv:
         stage2()
     else:
         top = int(sys.argv[sys.argv.index("--top") + 1]) if "--top" in sys.argv else 500
