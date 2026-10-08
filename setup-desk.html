@@ -456,7 +456,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
   #indBtn i{display:none}
   #grBtn,#inBtn,#tbBtn,#patBtn{display:none}
   .mob{display:block}
-  .chartwrap{height:calc(100vh - 168px);height:calc(100dvh - 168px);min-height:430px}
+  .chartwrap{height:calc(100vh - 200px);height:calc(100dvh - 200px);min-height:420px}      /* leaves the top of the stats strip in view as a cue that there is more below */
   #panel{padding:12px}
   .tabs button{padding:14px 12px}
 }
@@ -2026,6 +2026,7 @@ function tvRender(){
     rightPriceScale:{borderColor:col('--line'),mode:st.log?C.PriceScaleMode.Logarithmic:C.PriceScaleMode.Normal,scaleMargins:{top:.06,bottom:st.vol?.22:.06}},
     timeScale:{borderColor:col('--line'),rightOffset:4,timeVisible:false,minBarSpacing:0.01},   // small enough to fit decades of daily bars
     crosshair:{mode:C.CrosshairMode.Normal,vertLine:{color:col('--muted'),labelBackgroundColor:col('--muted')},horzLine:{color:col('--muted'),labelBackgroundColor:col('--muted')}},
+    handleScroll:{vertTouchDrag:!matchMedia('(max-width:760px)').matches},      // on a phone an up-or-down swipe on the chart scrolls the page to the stats below; sideways still pans
     localization:{locale:'en-IN'}});
   const lastUp=bars[bars.length-1].c>=(bars.length>1?bars[bars.length-2].c:bars[bars.length-1].o);
   let main;const dash={priceLineStyle:C.LineStyle.Dotted,priceLineColor:lastUp?up:down};
