@@ -369,6 +369,14 @@ def _build(best):
     mark on every quarter whose figures check out on three or more of the table's own identities (none failing). Such a quarter is the company's
     arithmetic, whatever another source says."""
     out = _build_op(best)
+    if best["basis"] == "Standalone":                        # a standalone profit is exactly profit before tax less tax; a misread digit in the profit line is put right
+        f0, div0 = best["found"], best["div"]
+        for i, q in enumerate(out):
+            if "pbt" in f0 and "tax" in f0 and "np" in f0 and None not in (f0["pbt"][i], f0["tax"][i], f0["np"][i]):
+                want = (f0["pbt"][i] - f0["tax"][i]) / div0
+                if abs(want - f0["np"][i] / div0) > max(2.0, 0.004 * abs(want)):
+                    q["np"] = round(want, 1)
+                    q["flags"] = [x for x in q["flags"] if x != "profit does not reconcile"]
     dates = best.get("dates") or []
     if len(dates) >= len(out) and dates and dates[0] == best["qend"] and len(set(dates[:len(out)])) == len(out):
         for q, d in zip(out, dates):

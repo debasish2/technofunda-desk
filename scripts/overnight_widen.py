@@ -23,6 +23,8 @@ sk = json.loads(widen.SKIPPED.read_text(encoding="utf-8"))
 have = {r["sym"] for r in con.execute("SELECT sym FROM stock")}
 cap = dict(market.connect().execute("SELECT sym, mcap FROM class").fetchall())
 todo = sorted((s for s, why in sk.items() if why in ("no quarters", "no Yahoo quarters") and s not in have and (cap.get(s) or 0) >= 500), key=lambda s: -(cap.get(s) or 0))
+first = ["AEGISLOG", "VRLLOG", "ANTELOPUS", "DEEPINDS", "JGCHEM"]       # the ones the scans were missing: tried again with the OCR-capable reader
+todo = first + [x for x in todo if x not in first]
 widen.log(f"overnight: {len(todo)} stocks to try")
 widen.stage_filings(todo)
 widen.backfill_annual_profit()

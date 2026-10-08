@@ -356,6 +356,12 @@ def _read(pdf, filed, basis):
             q["flags"].append("profit or margin out of proportion to sales (units?)")
     if any(not q["flags"] for q in qs):
         return qs
+    try:                                                    # a scan, or a text layer too garbled to read: OCR the few pages most likely to hold the table
+        ocr = filing.quarters_from_pdf(pdf, use_ocr=True, filed=filed, basis=basis)
+        if any(not q["flags"] for q in ocr):
+            return ocr
+    except Exception:
+        pass
     return quarters_from_pdf(pdf, filed=filed, basis=basis)
 
 
@@ -368,6 +374,8 @@ def fetch_missing(scrip, latest_have, nse_quarters=None, today=None, session=Non
     today is covered by a clean parse. `nse_quarters` ({qend: row}) cross-checks overlapping columns.
     """
     from . import nse
+    if basis == "Non-Consolidated":                         # NSE's name for what the PDFs call Standalone
+        basis = "Standalone"
     today = today or date.today()
     s = session or requests.Session()
     want, q = set(), latest_have
