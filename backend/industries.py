@@ -148,6 +148,12 @@ def enrich(snap, data):
                         "ind_rank_1m": cl["industry"].map(rows["ind_rank_1m"]), "ind_rank_3m": cl["industry"].map(rows["ind_rank_3m"])}, index=cl.index)
     per["ind_groups"] = float(len(rows))
     out = base.join(cl[["macro", "sector", "industry", "basic", "mcap"]], how="left").join(per, how="left")
+    try:                                                    # BSE's market cap is missing for some stocks: price times share count fills it in
+        from . import db
+        sh = pd.Series({r["sym"]: r["shares_cr"] for r in db.connect().execute("SELECT sym, shares_cr FROM stock WHERE shares_cr > 0")})
+        out["mcap"] = out["mcap"].fillna(out["last"] * sh.reindex(out.index))
+    except Exception:
+        pass
     return out
 
 
