@@ -351,5 +351,6 @@ fetch('/api/status').then(r=>r.json()).then(s=>{
 }).catch(()=>{});
 </script>
 <script>fetch('/api/me').then(r=>r.ok?r.json():null).then(m=>{if(!m||!m.auth)return;const nm=m.display||m.user;const a=document.getElementById('signOut'),p=document.getElementById('profileLink');if(a){a.style.display='';a.title='Sign out ('+nm+')'}if(p){p.style.display='';p.title='Profile: '+nm}}).catch(()=>{})</script>
+<script>(function(){const t=document.querySelector('.topbar');if(!t)return;t.addEventListener('click',e=>{if(!e.target.closest('a,button'))t.classList.toggle('open')});document.addEventListener('click',e=>{if(t.classList.contains('open')&&!e.target.closest('.topbar'))t.classList.remove('open')})})()</script>
 </body>
 </html>

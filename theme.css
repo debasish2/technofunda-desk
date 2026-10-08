@@ -73,3 +73,13 @@ a{text-underline-offset:3px}
 .skel:after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ink) 7%,transparent),transparent);animation:shimmer 1.3s infinite}
 @keyframes shimmer{to{transform:translateX(100%)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---- wide screens: the menu rail hides at the left edge and slides out when the pointer reaches it (a tap on the handle does the same on a touch screen) ---- */
+@media (min-width:1101px){
+  :root{--rail:0px}
+  .topbar{width:62px;transform:translateX(calc(-100% + 12px));transition:transform .16s ease;z-index:70}
+  .topbar::after{content:'';position:absolute;right:4px;top:50%;height:70px;width:4px;margin-top:-35px;border-radius:4px;background:var(--line);transition:opacity .12s}
+  .topbar:hover::after{background:var(--accent)}
+  .topbar:hover,.topbar.open,.topbar:has(:focus-visible){transform:none;box-shadow:10px 0 34px rgba(0,0,0,.28)}
+  .topbar:hover::after,.topbar.open::after{opacity:0}
+}

@@ -127,5 +127,6 @@ $('#ppl').onclick=async e=>{
 };
 load();
 </script>
+<script>(function(){const t=document.querySelector('.topbar');if(!t)return;t.addEventListener('click',e=>{if(!e.target.closest('a,button'))t.classList.toggle('open')});document.addEventListener('click',e=>{if(t.classList.contains('open')&&!e.target.closest('.topbar'))t.classList.remove('open')})})()</script>
 </body>
 </html>
