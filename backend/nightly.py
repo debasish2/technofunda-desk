@@ -200,6 +200,10 @@ def main(argv):
         if weekly:
             steps.append(("fundamentals", step_funds))
             steps.append(("standalone", step_standalone))
+        if "--only" in argv:                                 # a top-up run: just these steps, e.g. --only extras,desk,screens
+            keep = set(argv[argv.index("--only") + 1].split(","))
+            steps = [st for st in steps if st[0] in keep]
+            report["only"] = sorted(keep)
         for name, fn in steps:
             t = time.time()
             log(f"step {name}: start")

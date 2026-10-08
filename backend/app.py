@@ -4,16 +4,144 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from . import db, quality
+from . import auth, db, quality
 
 ROOT = Path(__file__).resolve().parent.parent
 app = FastAPI(title="TechnoFunda Desk")
 app.add_middleware(GZipMiddleware, minimum_size=1200)       # the price history and screener results are large JSON
 app.mount("/vendor", StaticFiles(directory=ROOT / "vendor"), name="vendor")      # third-party libraries, kept local
+
+
+# ---------------------------------------------------------------- login (see backend/auth.py)
+OPEN_PATHS = {"/login", "/setup", "/logout", "/api/status", "/favicon.ico"}      # /api/status lets start-desk.bat ask whether the server is up
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    path = request.url.path
+    if not auth.enabled() or path in OPEN_PATHS:
+        return await call_next(request)
+    user = auth.read_token(request.cookies.get(auth.COOKIE))
+    if user:
+        request.state.user = user
+        return await call_next(request)
+    if path.startswith("/api") or path.endswith((".js", ".css", ".json")):
+        return JSONResponse({"detail": "login required"}, status_code=401)
+    nxt = path + ("?" + request.url.query if request.url.query else "")
+    from urllib.parse import quote
+    return RedirectResponse("/login?next=" + quote(nxt, safe="/?=&"), status_code=303)
+
+
+_CSS = """:root{--bg:#f4f5f8;--panel:#fff;--ink:#14171f;--muted:#6a7282;--line:#dfe3ea;--accent:#4b5df5}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1017;--panel:#161a23;--ink:#eceff6;--muted:#8d95a6;--line:#252b38;--accent:#7b89ff}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
+form{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px 24px;box-shadow:0 10px 40px rgba(0,0,0,.12)}
+h1{margin:0 0 4px;font-size:21px}p{margin:0 0 18px;color:var(--muted);font-size:13.5px}label{display:block;margin:12px 0 4px;font-size:13px;color:var(--muted)}
+input{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:var(--bg);color:var(--ink);font-size:15px}input:focus{outline:2px solid var(--accent);border-color:transparent}
+button{width:100%;height:44px;margin-top:20px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.err{margin:14px 0 0;padding:9px 12px;border-radius:9px;background:rgba(224,49,49,.12);color:#e03131;font-size:13.5px}"""
+
+
+def _form(title, sub, fields, button, msg="", nxt="", action="/login"):
+    inputs = "".join(f'<label for="{n}">{lab}</label><input id="{n}" name="{n}" type="{t}" autocomplete="{ac}" required{" autofocus" if i == 0 else ""}>'
+                     for i, (n, lab, t, ac) in enumerate(fields))
+    hidden = f'<input type="hidden" name="next" value="{nxt}">' if nxt else ""
+    err = f'<div class="err" role="alert">{msg}</div>' if msg else ""
+    return HTMLResponse(f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+                        f'<meta name="robots" content="noindex"><title>{title}</title><style>{_CSS}</style></head><body>'
+                        f'<form method="post" action="{action}"><h1>{title}</h1><p>{sub}</p>{inputs}{hidden}<button type="submit">{button}</button>{err}</form></body></html>',
+                        headers={"Cache-Control": "no-store"})
+
+
+def _safe_next(n):
+    return n if n and n.startswith("/") and not n.startswith("//") and "\\" not in n else "/"
+
+
+async def _fields(request: Request):
+    from urllib.parse import parse_qs
+    raw = (await request.body()).decode("utf-8", "replace")
+    return {k: v[0] for k, v in parse_qs(raw, keep_blank_values=True).items()}
+
+
+def _login_response(request: Request, user, nxt):
+    r = RedirectResponse(_safe_next(nxt), status_code=303)
+    secure = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    r.set_cookie(auth.COOKIE, auth.make_token(user), max_age=auth.SESSION_DAYS * 86400, httponly=True, samesite="lax", secure=secure, path="/")
+    return r
+
+
+def _addr(request: Request):
+    return request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "?")
+
+
+@app.get("/login")
+def login_page(request: Request, next: str = "/", bad: int = 0, wait: int = 0):
+    if not auth.enabled():
+        return RedirectResponse("/setup", status_code=303)
+    msg = "Too many wrong attempts. Wait a minute and try again." if wait else ("That user name or password is not right." if bad else "")
+    return _form("TechnoFunda Desk", "Sign in to continue.", [("username", "User name", "text", "username"), ("password", "Password", "password", "current-password")],
+                 "Sign in", msg, _safe_next(next).replace('"', ""))
+
+
+@app.post("/login")
+async def login_submit(request: Request):
+    f = await _fields(request)
+    nxt = _safe_next(f.get("next", "/"))
+    from urllib.parse import quote
+    addr = _addr(request)
+    if auth.locked(addr):
+        return RedirectResponse(f"/login?wait=1&next={quote(nxt, safe='/?=&')}", status_code=303)
+    if auth.check(f.get("username", ""), f.get("password", "")):
+        auth.succeeded(addr)
+        return _login_response(request, f["username"].strip(), nxt)
+    auth.failed(addr)
+    return RedirectResponse(f"/login?bad=1&next={quote(nxt, safe='/?=&')}", status_code=303)
+
+
+def _is_local(request: Request):
+    return bool(request.client) and request.client.host in ("127.0.0.1", "::1") and "x-forwarded-for" not in request.headers
+
+
+@app.get("/setup")
+def setup_page(request: Request, msg: str = ""):
+    if auth.enabled():
+        return RedirectResponse("/login", status_code=303)
+    if not _is_local(request):
+        return PlainTextResponse("The first login has to be created on the PC that runs the server: open http://localhost:8000/setup there.", status_code=403)
+    return _form("Create your login", "This PC only. Choose the user name and password you will use on every device.",
+                 [("username", "User name", "text", "username"), ("password", "Password (8+ characters)", "password", "new-password"), ("again", "Password again", "password", "new-password")],
+                 "Create login", msg.replace("<", ""), action="/setup")
+
+
+@app.post("/setup")
+async def setup_submit(request: Request):
+    if auth.enabled() or not _is_local(request):
+        return RedirectResponse("/login", status_code=303)
+    f = await _fields(request)
+    from urllib.parse import quote
+    if f.get("password") != f.get("again"):
+        return RedirectResponse("/setup?msg=" + quote("The two passwords differ."), status_code=303)
+    try:
+        name = auth.add_user(f.get("username", ""), f.get("password", ""), admin=True)
+    except ValueError as e:
+        return RedirectResponse("/setup?msg=" + quote(str(e)), status_code=303)
+    return _login_response(request, name, "/")
+
+
+@app.get("/logout")
+def logout():
+    r = RedirectResponse("/login", status_code=303)
+    r.delete_cookie(auth.COOKIE, path="/")
+    return r
+
+
+@app.get("/api/me")
+def whoami(request: Request):
+    return {"auth": auth.enabled(), "user": getattr(request.state, "user", None)}
 
 
 def stock_payload(con, row, with_bars=True):
