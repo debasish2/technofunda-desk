@@ -378,7 +378,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
   .app.research .chartwrap,.app.research .qstats,.app.research .statbar,.app.research #focusBtn{display:none}
   .app.research #panel{max-width:1240px;margin:0 auto;padding:22px 26px 40px}
   .app.research .tabs{justify-content:flex-start}.app.research .tabs button{flex:0 0 auto;padding:16px 20px;font-size:14.5px}
-  .app.focus{--wl:0px}
+  .app.focus{grid-template-columns:0px minmax(0,1fr)}      /* not --wl: the list width is set inline, so only the column itself can be collapsed */
   .app.focus .list,.app.focus .head,.app.focus #rzL{display:none}
 }
 @media (max-width:1100px){
