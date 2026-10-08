@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Setup Desk</title>
+<title>Dalal Desk</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f4fe0'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -359,7 +359,30 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
   .head{padding:0 12px;gap:8px}
   .head .search{flex:1 1 auto;max-width:none;min-width:0}
 }
+
+/* ---- desktop: the stock list beside either the chart or the research page; the menu rail hides at the left edge and slides out on hover ---- */
+.brand{display:grid;place-items:center;width:34px;height:34px;margin:0 0 6px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;letter-spacing:.02em}
+.rb.mode[aria-pressed=true]{background:var(--soft);color:var(--accent);opacity:1}.rb.mode[aria-pressed=false]{opacity:1}
+.railzone{display:none}
+@media (min-width:1101px){
+  .app{--rail:0px;grid-template-columns:var(--wl) minmax(0,1fr);grid-template-areas:"head center" "list center"}
+  .top{position:fixed;left:0;top:0;bottom:0;width:64px;z-index:70;transform:translateX(-102%);transition:transform .16s ease}
+  .railzone{display:block;position:fixed;left:0;top:0;bottom:0;width:14px;z-index:69;cursor:pointer}
+  .railzone::after{content:'';position:absolute;left:3px;top:50%;height:70px;width:4px;margin-top:-35px;border-radius:4px;background:var(--line);transition:background .15s,height .15s}
+  .railzone:hover::after{background:var(--accent);height:90px}
+  .railzone:hover+.top,.top:hover,.top:has(:focus-visible),.top.open{transform:none;box-shadow:10px 0 34px rgba(0,0,0,.28)}
+  #rzR,#vwSeg{display:none!important}
+  .right{display:none;grid-area:auto;flex:1 1 auto;min-height:0;border-left:0;overflow:auto;background:var(--bg)}
+  .app.research .right{display:block}
+  .app.research .center{overflow:hidden}
+  .app.research .chartwrap,.app.research .qstats,.app.research .statbar,.app.research #focusBtn{display:none}
+  .app.research #panel{max-width:1240px;margin:0 auto;padding:22px 26px 40px}
+  .app.research .tabs{justify-content:flex-start}.app.research .tabs button{flex:0 0 auto;padding:16px 20px;font-size:14.5px}
+  .app.focus{--wl:0px}
+  .app.focus .list,.app.focus .head,.app.focus #rzL{display:none}
+}
 @media (max-width:1100px){
+  .rb.mode,.brand{display:none}
   .app{grid-template-rows:54px auto auto auto;grid-template-areas:"top" "head" "center" "right"}
   .head{padding:8px 12px}.head .hnote,.head #hMenu{display:none}
   .app.focus{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;grid-template-areas:"center"}
@@ -469,11 +492,16 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 </head>
 <body>
 <div class="app" id="app">
+  <div class="railzone" id="railzone" title="Menu: Chart, Research and the other pages"></div>
   <header class="top">
+    <div class="brand" title="Dalal Desk">DD</div>
     <button class="rb icon" id="menuBtn" aria-label="Show stock list"><span class="lb">☰</span></button>
     <button class="rb" id="tgSearch" hidden title="Search companies ( / )"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="5.5"/><path d="M13.2 13.2L17 17"/></svg><span class="lb">Search</span></button>
     <button class="rb vt" id="tgList" hidden aria-pressed="true" title="Show or hide the stock list"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="12" rx="1.5"/><path d="M8 4v12"/></svg><span class="lb">List</span></button>
     <button class="rb vt" id="tgRight" hidden aria-pressed="true" title="Show or hide the details panel"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="12" rx="1.5"/><path d="M12 4v12"/></svg><span class="lb">Details</span></button>
+    <button class="rb mode" id="modeChart" data-mode="chart" aria-pressed="true" title="Chart, with the stock list beside it"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v3M5 14v3M15 2v4M15 13v5"/><rect x="3" y="6" width="4" height="8"/><rect x="13" y="6" width="4" height="7"/></svg><span class="lb">Chart</span></button>
+    <button class="rb mode" id="modeResearch" data-mode="research" aria-pressed="false" title="Research (fundamentals, technicals, peers...), with the stock list beside it"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2.5h7l3.5 3.5V17a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5z"/><path d="M7.5 10h5M7.5 13h5M7.5 7h2.5"/></svg><span class="lb">Research</span></button>
+    <i class="sep"></i>
     <a class="rb" href="/screener" title="Screener"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h14l-5.5 6.5V16l-3-1.5v-3z"/></svg><span class="lb">Screener</span></a>
     <a class="rb" href="/breadth" title="Market breadth"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V9M8 16V4M13 16v-5M17.5 16H2.5"/></svg><span class="lb">Breadth</span></a>
   <a class="rb" href="/industries" title="Industries"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/></svg><span class="lb">Industries</span></a>
@@ -512,7 +540,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
         <h1 id="hName"></h1><span class="sub" id="hSub"></span><span id="hBadge"></span>
         <button class="wl" id="wlBtn" aria-pressed="false">☆ List</button>
       </div>
-      <div class="shr"><a class="tone" id="tone" href="/breadth" hidden></a><span class="px" id="hPx"></span><span class="pxmeta" id="hMeta"></span><div class="seg2" id="vwSeg"><button data-v="chart" aria-pressed="true" title="Chart and list at their usual size">Chart</button><button data-v="research" aria-pressed="false" title="Give the details panel half the screen">Research</button></div><button class="tg" id="focusBtn" title="Hide the navigation and details, keep the list and chart (Esc to exit)">⛶<span class="tx"> Focus</span></button></div>
+      <div class="shr"><a class="tone" id="tone" href="/breadth" hidden></a><span class="px" id="hPx"></span><span class="pxmeta" id="hMeta"></span><button class="tg" id="focusBtn" title="Hide the stock list too and give the chart the whole screen (Esc to exit)">⛶<span class="tx"> Focus</span></button></div>
     </div>
 
     <section class="chartwrap" id="chartwrap">
@@ -574,19 +602,19 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 
     <div class="qstats" id="qstats"></div>
     <div class="statbar" id="statbar"></div>
+    <aside class="right">
+      <div class="tabs" id="tabs" role="tablist">
+        <button role="tab" data-t="fund" aria-selected="true">Fundamentals</button>
+        <button role="tab" data-t="tech" aria-selected="false">Technical</button>
+        <button role="tab" data-t="peers" aria-selected="false">Peers</button>
+        <button role="tab" data-t="ins" aria-selected="false">Insider</button>
+        <button role="tab" data-t="scr" aria-selected="false">Screens</button>
+        <button role="tab" data-t="cred" aria-selected="false">Credibility</button>
+      </div>
+      <div id="panel"></div>
+    </aside>
   </main>
 
-  <aside class="right">
-    <div class="tabs" id="tabs" role="tablist">
-      <button role="tab" data-t="fund" aria-selected="true">Fundamentals</button>
-      <button role="tab" data-t="tech" aria-selected="false">Technical</button>
-      <button role="tab" data-t="peers" aria-selected="false">Peers</button>
-      <button role="tab" data-t="ins" aria-selected="false">Insider</button>
-      <button role="tab" data-t="scr" aria-selected="false">Screens</button>
-      <button role="tab" data-t="cred" aria-selected="false">Credibility</button>
-    </div>
-    <div id="panel"></div>
-  </aside>
 </div>
 
 <script src="data.js"></script>
@@ -609,7 +637,7 @@ const FONT="'Inter',system-ui,sans-serif";
 if(location.protocol==='file:'&&!/[?&]nr=1/.test(location.search)){        // (add ?nr=1 to skip the redirect, for testing)                       // Screener, Breadth and the real data all come from the local server
   const go=()=>location.replace('http://localhost:8000/');
   fetch('http://localhost:8000/api/status',{mode:'no-cors'}).then(go).catch(()=>{
-    document.body.insertAdjacentHTML('afterbegin','<div style="position:fixed;z-index:999;left:0;right:0;top:0;padding:12px 18px;background:#b4232c;color:#fff;font:14px system-ui">The Setup Desk server is not running, so the Screener, Breadth and your real data are unavailable. Double-click <b>start-desk.bat</b> in the project folder; it starts the server and opens this page.</div>')});
+    document.body.insertAdjacentHTML('afterbegin','<div style="position:fixed;z-index:999;left:0;right:0;top:0;padding:12px 18px;background:#b4232c;color:#fff;font:14px system-ui">The Dalal Desk server is not running, so the Screener, Breadth and your real data are unavailable. Double-click <b>start-desk.bat</b> in the project folder; it starts the server and opens this page.</div>')});
 }
 const store={get(){try{return JSON.parse(localStorage.getItem('setupdesk.v1')||'{}')}catch(e){return {}}},set(o){try{localStorage.setItem('setupdesk.v1',JSON.stringify(o))}catch(e){}}};
 const prefs=Object.assign({theme:null,watch:[],draw:{},sym:null},store.get());
@@ -2447,7 +2475,7 @@ $('#rows').addEventListener('click',e=>{const b=e.target.closest('.row');if(b)se
 $('#panel').addEventListener('click',e=>{const r=e.target.closest('tr.pick');if(r)select(r.dataset.s)});
 $('#cols').addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;if(st.sortK===k)st.sortD*=-1;else{st.sortK=k;st.sortD=k==='sym'?-1:-1}renderList()});
 $('#listSel').addEventListener('change',e=>{st.list=e.target.value;renderList()});
-const setFocus=on=>{$('#app').classList.toggle('focus',on);$('#focusBtn').textContent=on?'✕ Exit focus (Esc)':'⛶ Focus';setTimeout(resize,60)};
+const setFocus=on=>{if(on&&ui.mode==='research'){ui.mode='chart';applyUI();saveUI()}$('#app').classList.toggle('focus',on);$('#focusBtn').textContent=on?'✕ Exit focus (Esc)':'⛶ Focus';setTimeout(resize,60)};
 $('#focusBtn').addEventListener('click',()=>setFocus(!$('#app').classList.contains('focus')));
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.tab=b.dataset.t;$$('#tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));renderPanel();$('.right').scrollTop=0});
 $('#wlBtn').addEventListener('click',()=>{const i=prefs.watch.indexOf(cur.sym);if(i<0)prefs.watch.push(cur.sym);else prefs.watch.splice(i,1);save();buildSel();renderHead();renderList()});
@@ -2520,14 +2548,16 @@ document.addEventListener('keydown',e=>{
 /* ---------- adjustable layout: drag the two dividers, hide the list or the details panel ---------- */
 const UI_DEF={wl:Math.round(clamp(innerWidth*.17,270,370)),wr:Math.round(clamp(innerWidth*.29,400,650))};
 if(prefs.ui&&prefs.ui.wl===292&&prefs.ui.wr===420)delete prefs.ui.wl,delete prefs.ui.wr;          // the old built-in widths: move to the new defaults
-const ui=Object.assign({wl:UI_DEF.wl,wr:UI_DEF.wr,list:true,right:true},prefs.ui||{});
+const ui=Object.assign({wl:UI_DEF.wl,wr:UI_DEF.wr,list:true,right:true,mode:'chart'},prefs.ui||{});
+if(ui.mode!=='research')ui.mode='chart';
 ui.right=true;                                                     // the details panel is no longer hidden from the rail: Focus and the Chart / Research switch cover it
 function applyUI(){
   const a=$('#app');
   ui.list?a.style.setProperty('--wl',ui.wl+'px'):a.style.removeProperty('--wl');       // the nolist / noright classes set the width to 0
   ui.right?a.style.setProperty('--wr',ui.wr+'px'):a.style.removeProperty('--wr');
   a.classList.toggle('nolist',!ui.list);a.classList.toggle('noright',!ui.right);
-  $$('#vwSeg button').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='research')===(ui.right&&ui.wr>UI_DEF.wr+150)));
+  a.classList.toggle('research',ui.mode==='research');
+  $$('.rb.mode').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===ui.mode));
   $('#tgList').setAttribute('aria-pressed',ui.list);$('#tgRight').setAttribute('aria-pressed',ui.right);
 }
 const saveUI=()=>{prefs.ui=ui;save();setTimeout(resize,40)};
@@ -2542,7 +2572,10 @@ function dragger(el,key,sign,min,max){
 }
 $('#hMenu').addEventListener('click',()=>$('#tgList').click());
 $('#hTheme').addEventListener('click',()=>$('#themeBtn').click());
-$('#vwSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ui.right=true;ui.wr=b.dataset.v==='research'?Math.round(Math.min(innerWidth*.52,900)):UI_DEF.wr;applyUI();saveUI()});
+const rail=$('.top'),zone=$('#railzone');
+zone.addEventListener('click',()=>rail.classList.toggle('open'));                    // for a touch screen: no hover, so a tap opens and closes the menu
+document.addEventListener('click',e=>{if(rail.classList.contains('open')&&!e.target.closest('.top,#railzone'))rail.classList.remove('open')});
+$$('.rb.mode').forEach(b=>b.addEventListener('click',()=>{b.blur();ui.mode=b.dataset.mode;applyUI();saveUI();rail.classList.remove('open');if(ui.mode==='chart')setTimeout(()=>{resize();if(TV.chart)TV.sig='';draw()},80);else{const r=$('.right');if(r)r.scrollTop=0}}));
 dragger($('#rzL'),'wl',1,230,560);dragger($('#rzR'),'wr',-1,300,900);
 $('#tgSearch').addEventListener('click',()=>{            // the search box lives in the list panel, so bring the list up first
   if(!ui.list){ui.list=true;applyUI();saveUI()}

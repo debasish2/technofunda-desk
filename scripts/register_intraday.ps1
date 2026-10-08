@@ -30,6 +30,6 @@ $rep = New-ScheduledTaskTrigger -Once -At $At -RepetitionInterval (New-TimeSpan 
 $trigger.Repetition = $rep.Repetition
 
 Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Settings $settings -Force `
-    -Description "Setup Desk: hourly intraday snapshot for the market breadth" | Out-Null
+    -Description "Dalal Desk: hourly intraday snapshot for the market breadth" | Out-Null
 Get-ScheduledTask -TaskName $name | Select-Object TaskName, State | Format-Table -AutoSize
 Write-Host "Registered. Runs hourly 09:30-16:30 on weekdays."

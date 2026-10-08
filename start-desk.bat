@@ -1,10 +1,10 @@
 @echo off
-rem Starts the Setup Desk server (if it is not already running) and opens the site.
+rem Starts the Dalal Desk server (if it is not already running) and opens the site.
 cd /d "%~dp0"
 powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing http://localhost:8000/api/status -TimeoutSec 3 | Out-Null; exit 0 } catch { exit 1 }"
 if errorlevel 1 (
-  echo Starting the Setup Desk server...
-  start "Setup Desk server" /min ".venv\Scripts\python.exe" -m uvicorn backend.app:app --host 0.0.0.0 --port 8000
+  echo Starting the Dalal Desk server...
+  start "Dalal Desk server" /min ".venv\Scripts\python.exe" -m uvicorn backend.app:app --host 0.0.0.0 --port 8000
   timeout /t 8 /nobreak >nul
 )
 start "" http://localhost:8000/
