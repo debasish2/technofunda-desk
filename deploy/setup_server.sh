@@ -40,7 +40,7 @@ tar -xzf "$here/app.tar.gz" -C /opt/technofunda
 mkdir -p /opt/technofunda/data
 if [ -f "$here/data.tar.gz" ]; then tar -xzf "$here/data.tar.gz" -C /opt/technofunda/data; fi
 chmod 600 /opt/technofunda/data/secret.key /opt/technofunda/data/users.json 2>/dev/null || true
-sed -i 's/$//' /opt/technofunda/deploy/*.sh /opt/technofunda/deploy/systemd/*      # in case Windows line endings came along
+sed -i 's/\r$//' /opt/technofunda/deploy/*.sh /opt/technofunda/deploy/systemd/*      # in case Windows line endings came along
 chmod +x /opt/technofunda/deploy/*.sh
 chown -R desk:desk /opt/technofunda /home/desk
 
