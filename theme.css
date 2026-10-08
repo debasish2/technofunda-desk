@@ -80,6 +80,7 @@ a{text-underline-offset:3px}
   .topbar{width:62px;transform:translateX(calc(-100% + 12px));transition:transform .16s ease;z-index:70}
   .topbar::after{content:'';position:absolute;right:4px;top:50%;height:70px;width:4px;margin-top:-35px;border-radius:4px;background:var(--line);transition:opacity .12s}
   .topbar:hover::after{background:var(--accent)}
+  .topbar:not(:hover):not(.open):not(:has(:focus-visible)){background:transparent;border-right-color:transparent}      /* while hidden only the little handle shows, and nothing is covered */
   .topbar:hover,.topbar.open,.topbar:has(:focus-visible){transform:none;box-shadow:10px 0 34px rgba(0,0,0,.28)}
   .topbar:hover::after,.topbar.open::after{opacity:0}
 }
