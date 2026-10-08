@@ -194,9 +194,6 @@ button{cursor:pointer}
 .qc .v{font-weight:500}
 .qc .d{display:flex;flex-direction:column;font-size:11px;line-height:1.25;text-align:right;color:var(--muted)}
 .qc .d i{font-style:normal}
-.app.focus{grid-template-columns:var(--wl) minmax(0,1fr);grid-template-areas:"list center"}
-.app.focus .top,.app.focus .right,.app.focus #rzR{display:none}
-.app.focus #rzL{left:calc(var(--wl) - 4px)}
 .app.nolist{--wl:0px}.app.nolist .list,.app.nolist #rzL{display:none}
 .app.noright{--wr:0px}.app.noright .right,.app.noright #rzR{display:none}
 .rz{position:absolute;top:0;bottom:0;width:9px;z-index:30;cursor:col-resize;touch-action:none}
@@ -353,7 +350,6 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 .shr{gap:12px}
 @media (min-width:1101px){
   .app{--head:60px;grid-template-rows:var(--head) minmax(0,1fr);grid-template-areas:"top head center right" "top list center right"}
-  .app.focus{grid-template-rows:var(--head) minmax(0,1fr);grid-template-areas:"head center" "list center"}
   .app.nolist .head{display:none}
   .head #hTheme,.head .hnote,.head .grow{display:none}
   .head{padding:0 12px;gap:8px}
@@ -375,21 +371,14 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
   .right{display:none;grid-area:auto;flex:1 1 auto;min-height:0;border-left:0;overflow:auto;background:var(--bg)}
   .app.research .right{display:block}
   .app.research .center{overflow:hidden}
-  .app.research .chartwrap,.app.research .qstats,.app.research .statbar,.app.research #focusBtn{display:none}
+  .app.research .chartwrap,.app.research .qstats,.app.research .statbar{display:none}
   .app.research #panel{max-width:1240px;margin:0 auto;padding:22px 26px 40px}
   .app.research .tabs{justify-content:flex-start}.app.research .tabs button{flex:0 0 auto;padding:16px 20px;font-size:14.5px}
-  .app.focus{grid-template-columns:0px minmax(0,1fr)}      /* not --wl: the list width is set inline, so only the column itself can be collapsed */
-  .app.focus .list,.app.focus .head,.app.focus #rzL{display:none}
 }
 @media (max-width:1100px){
   .rb.mode,.brand{display:none}
   .app{grid-template-rows:54px auto auto auto;grid-template-areas:"top" "head" "center" "right"}
   .head{padding:8px 12px}.head .hnote,.head #hMenu{display:none}
-  .app.focus{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;grid-template-areas:"center"}
-  .app.focus .top,.app.focus .head,.app.focus .right,.app.focus .qstats,.app.focus .statbar{display:none}
-  .app.focus .shl .sub,.app.focus #wlBtn,.app.focus #hBadge,.app.focus #hMeta,.app.focus #tone{display:none}
-  .app.focus .stockhead{padding:8px 12px 6px;gap:2px}.app.focus .shr{flex-wrap:nowrap;justify-content:space-between}.app.focus .px{font-size:22px}
-  .app.focus .chartwrap{height:calc(100vh - 100px);height:calc(100dvh - 100px);min-height:380px}
 }
 
 /* ---- compact header and toolbar: more room for the chart ---- */
@@ -540,7 +529,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
         <h1 id="hName"></h1><span class="sub" id="hSub"></span><span id="hBadge"></span>
         <button class="wl" id="wlBtn" aria-pressed="false">☆ List</button>
       </div>
-      <div class="shr"><a class="tone" id="tone" href="/breadth" hidden></a><span class="px" id="hPx"></span><span class="pxmeta" id="hMeta"></span><button class="tg" id="focusBtn" title="Hide the stock list too and give the chart the whole screen (Esc to exit)">⛶<span class="tx"> Focus</span></button></div>
+      <div class="shr"><a class="tone" id="tone" href="/breadth" hidden></a><span class="px" id="hPx"></span><span class="pxmeta" id="hMeta"></span></div>
     </div>
 
     <section class="chartwrap" id="chartwrap">
@@ -2475,8 +2464,6 @@ $('#rows').addEventListener('click',e=>{const b=e.target.closest('.row');if(b)se
 $('#panel').addEventListener('click',e=>{const r=e.target.closest('tr.pick');if(r)select(r.dataset.s)});
 $('#cols').addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;if(st.sortK===k)st.sortD*=-1;else{st.sortK=k;st.sortD=k==='sym'?-1:-1}renderList()});
 $('#listSel').addEventListener('change',e=>{st.list=e.target.value;renderList()});
-const setFocus=on=>{if(on&&ui.mode==='research'){ui.mode='chart';applyUI();saveUI()}$('#app').classList.toggle('focus',on);$('#focusBtn').textContent=on?'✕ Exit focus (Esc)':'⛶ Focus';setTimeout(resize,60)};
-$('#focusBtn').addEventListener('click',()=>setFocus(!$('#app').classList.contains('focus')));
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.tab=b.dataset.t;$$('#tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));renderPanel();$('.right').scrollTop=0});
 $('#wlBtn').addEventListener('click',()=>{const i=prefs.watch.indexOf(cur.sym);if(i<0)prefs.watch.push(cur.sym);else prefs.watch.splice(i,1);save();buildSel();renderHead();renderList()});
 function seg(id,attr,key){$('#'+id).addEventListener('click',e=>{const b=e.target.closest('button[data-'+attr+']');if(!b)return;st[key]=b.dataset[attr];if(key==='range'||key==='iv'){st.vis=null;forgetView()}$$('#'+id+' button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#'+id).hidden=true;syncDD();draw();renderTable()})}
@@ -2536,7 +2523,6 @@ res.addEventListener('click',e=>{const b=e.target.closest('button');if(b){select
 
 // keyboard
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'&&$('#app').classList.contains('focus')){setFocus(false);return}
   if(e.key==='Escape'){pend=null;st.sel=null;setTool('cursor');const w=$('#chartwrap');if(w.classList.contains('fs')){w.classList.remove('fs');$('#fsBtn').firstChild.nodeValue='⤢ '}return}
   if(e.target.closest('input,select,textarea'))return;
   if(e.key==='/'){e.preventDefault();$('#tgSearch').click();return}
