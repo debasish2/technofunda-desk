@@ -36,6 +36,16 @@ async def require_login(request: Request, call_next):
     return RedirectResponse("/login?next=" + quote(nxt, safe="/?=&"), status_code=303)
 
 
+@app.middleware("http")
+async def revalidate(request: Request, call_next):
+    """Pages, stylesheets and scripts are checked against the server on every load (answered with a tiny 304 when unchanged), so a change shows
+    up at once instead of whenever the browser's own guess about freshness runs out."""
+    resp = await call_next(request)
+    if "cache-control" not in resp.headers and resp.headers.get("content-type", "").startswith(("text/html", "text/css", "application/javascript", "text/javascript")):
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 _CSS = """:root{--bg:#f4f5f8;--panel:#fff;--ink:#14171f;--muted:#6a7282;--line:#dfe3ea;--accent:#4b5df5}
 @media (prefers-color-scheme:dark){:root{--bg:#0d1017;--panel:#161a23;--ink:#eceff6;--muted:#8d95a6;--line:#252b38;--accent:#7b89ff}}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
