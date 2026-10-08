@@ -3,7 +3,7 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -129,6 +129,7 @@ async def setup_submit(request: Request):
         name = auth.add_user(f.get("username", ""), f.get("password", ""), admin=True)
     except ValueError as e:
         return RedirectResponse("/setup?msg=" + quote(str(e)), status_code=303)
+    db.connect().execute("UPDATE screen SET user=? WHERE user='me'", (name,)).connection.commit()
     return _login_response(request, name, "/")
 
 
@@ -139,9 +140,133 @@ def logout():
     return r
 
 
+def _who(request: Request):
+    """The signed-in user's name; 'me' while the login is off (the name saved screens were filed under before there were logins)."""
+    return getattr(request.state, "user", None) or "me"
+
+
+def _need_user(request: Request):
+    u = getattr(request.state, "user", None)
+    if not u:
+        raise HTTPException(404, "the login is not switched on")
+    return u
+
+
+def _need_admin(request: Request):
+    u = _need_user(request)
+    if not auth.is_admin(u):
+        raise HTTPException(403, "administrators only")
+    return u
+
+
 @app.get("/api/me")
 def whoami(request: Request):
-    return {"auth": auth.enabled(), "user": getattr(request.state, "user", None)}
+    u = getattr(request.state, "user", None)
+    return {"auth": auth.enabled(), "user": u, "display": (auth.info(u) or {}).get("display") if u else None}
+
+
+@app.get("/profile")
+def profile_page():
+    return FileResponse(ROOT / "profile.html")
+
+
+@app.get("/prefs-sync.js")
+def prefs_sync_js():
+    return FileResponse(ROOT / "prefs-sync.js", media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/profile")
+def api_profile(request: Request):
+    u = _need_user(request)
+    prefs = auth.load_prefs(u)["items"]
+    return {"me": auth.info(u), "users": auth.list_users() if auth.is_admin(u) else None,
+            "settings": {"keys": len(prefs), "bytes": sum(len(k) + len(v) for k, v in prefs.items())},
+            "screens": len(db.connect().execute("SELECT id FROM screen WHERE user=?", (u,)).fetchall())}
+
+
+@app.post("/api/profile/display")
+def api_profile_display(request: Request, body: dict = Body(...)):
+    auth.set_display(_need_user(request), str(body.get("display", "")))
+    return {"ok": True}
+
+
+@app.post("/api/profile/password")
+def api_profile_password(request: Request, body: dict = Body(...)):
+    u = _need_user(request)
+    try:
+        auth.change_password(u, str(body.get("current", "")), str(body.get("new", "")))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    r = JSONResponse({"ok": True})
+    secure = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    r.set_cookie(auth.COOKIE, auth.make_token(u), max_age=auth.SESSION_DAYS * 86400, httponly=True, samesite="lax", secure=secure, path="/")
+    return r      # every other device is signed out: the old cookies no longer match the new password
+
+
+@app.post("/api/users")
+def api_users_add(request: Request, body: dict = Body(...)):
+    _need_admin(request)
+    name = str(body.get("name", "")).strip()
+    if auth.exists(name):
+        raise HTTPException(400, "that user name is taken")
+    try:
+        auth.add_user(name, str(body.get("password", "")), admin=bool(body.get("admin")))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@app.post("/api/users/{name}/password")
+def api_users_password(name: str, request: Request, body: dict = Body(...)):
+    me = _need_admin(request)
+    if not auth.exists(name):
+        raise HTTPException(404, "no such user")
+    try:
+        auth.add_user(name, str(body.get("password", "")))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    r = JSONResponse({"ok": True})
+    if name == me:
+        secure = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+        r.set_cookie(auth.COOKIE, auth.make_token(me), max_age=auth.SESSION_DAYS * 86400, httponly=True, samesite="lax", secure=secure, path="/")
+    return r
+
+
+@app.delete("/api/users/{name}")
+def api_users_remove(name: str, request: Request):
+    me = _need_admin(request)
+    if name == me:
+        raise HTTPException(400, "you cannot remove the account you are using")
+    try:
+        auth.remove_user(name)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    db.connect().execute("DELETE FROM screen_hit WHERE screen_id IN (SELECT id FROM screen WHERE user=?)", (name,)).connection.commit()
+    db.connect().execute("DELETE FROM screen WHERE user=?", (name,)).connection.commit()
+    return {"ok": True}
+
+
+@app.get("/api/prefs")
+def api_prefs_get(request: Request):
+    u = getattr(request.state, "user", None)
+    if not u:
+        return {"sync": False}
+    return {"sync": True, **auth.load_prefs(u)}
+
+
+@app.put("/api/prefs")
+def api_prefs_put(request: Request, body: dict = Body(...)):
+    try:
+        auth.save_prefs(_need_user(request), body.get("items") or {})
+    except ValueError as e:
+        raise HTTPException(413, str(e))
+    return {"ok": True}
+
+
+@app.delete("/api/prefs")
+def api_prefs_delete(request: Request):
+    auth.delete_prefs(_need_user(request))
+    return {"ok": True}
 
 
 def stock_payload(con, row, with_bars=True):
@@ -550,41 +675,41 @@ def api_run(body: dict = Body(...)):
 
 
 @app.get("/api/screens")
-def api_screens():
+def api_screens(request: Request):
     """Saved screens with how many stocks match on the latest session and which of them are new since the one before."""
     from . import screens
-    return screens.summary(db.connect())
+    return screens.summary(db.connect(), _who(request))
 
 
 @app.post("/api/screens")
-def api_screens_create(body: dict = Body(...)):
+def api_screens_create(request: Request, body: dict = Body(...)):
     from . import screens
     name = (body.get("name") or "").strip()
     if not name:
         raise HTTPException(400, "give the screen a name")
     sid = screens.create(db.connect(), name, body.get("filters") or {}, body.get("min_value_cr") or 0,
-                         market_tables()["snap"], fund_table())
+                         market_tables()["snap"], fund_table(), user=_who(request))
     return {"id": sid}
 
 
 @app.delete("/api/screens/{sid}")
-def api_screens_delete(sid: int):
+def api_screens_delete(sid: int, request: Request):
     from . import screens
-    screens.remove(db.connect(), sid)
+    screens.remove(db.connect(), sid, _who(request))
     return {"ok": True}
 
 
 @app.post("/api/screens/{sid}/refresh")
-def api_screens_refresh(sid: int):
+def api_screens_refresh(sid: int, request: Request):
     """Re-run one saved screen on the latest data (the nightly job does this for all of them)."""
     import json as _json
     from . import screens
     con = db.connect()
-    r = con.execute("SELECT filters, min_value_cr FROM screen WHERE id=?", (sid,)).fetchone()
+    r = con.execute("SELECT filters, min_value_cr FROM screen WHERE id=? AND user=?", (sid, _who(request))).fetchone()
     if r is None:
         raise HTTPException(404, "no such screen")
     screens.snapshot(con, sid, _json.loads(r["filters"]), r["min_value_cr"], market_tables()["snap"], fund_table())
-    return next(x for x in screens.summary(con) if x["id"] == sid)
+    return next(x for x in screens.summary(con, _who(request)) if x["id"] == sid)
 
 
 @app.get("/screener")

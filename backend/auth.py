@@ -13,6 +13,10 @@ How it is kept safe:
   * a login gives a signed cookie (HMAC-SHA256 with a random key in data/secret.key) that lasts 30 days, is HttpOnly and SameSite=Lax,
     and is marked Secure when the page is served over https
   * five wrong passwords from one address lock that address out for a minute, and every wrong attempt takes a moment
+  * changing a password signs that user out everywhere else (the cookie carries a short fingerprint of the password hash)
+
+Each user also has a profile: a display name, a password they can change, and their own saved settings (data/userprefs/NAME.json), which the pages
+copy to and from the browser so the same watchlist, columns, filters and drawings follow the person to any device.
 """
 import base64
 import getpass
@@ -26,6 +30,8 @@ from pathlib import Path
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 USERS = DATA / "users.json"
+PREFS = DATA / "userprefs"
+MAX_PREFS = 2_000_000
 KEY = DATA / "secret.key"
 COOKIE = "td_session"
 SESSION_DAYS = 30
@@ -82,20 +88,84 @@ def _verify(pw, stored):
 
 def add_user(name, pw, admin=False):
     name = name.strip()
-    if not name or len(name) > 40 or not all(c.isalnum() or c in "._-@" for c in name):
-        raise ValueError("a user name is 1-40 letters, digits, . _ - or @")
+    if not name or len(name) > 40 or not name[0].isalnum() or not all(c.isalnum() or c in "._-@" for c in name):
+        raise ValueError("a user name is 1-40 letters, digits, . _ - or @, starting with a letter or digit")
     if len(pw) < 8:
         raise ValueError("a password needs at least 8 characters")
     users = dict(_users())
-    users[name] = {"hash": hash_password(pw), "admin": bool(admin) or (not users and True), "created": time.strftime("%Y-%m-%d %H:%M")}
+    old = users.get(name, {})
+    users[name] = {**old, "hash": hash_password(pw), "admin": bool(admin) or bool(old.get("admin")) or not users,
+                   "created": old.get("created") or time.strftime("%Y-%m-%d %H:%M")}
     _save(users)
     return name
 
 
+def set_display(name, text):
+    users = dict(_users())
+    if name not in users:
+        raise ValueError("no such user")
+    users[name] = {**users[name], "display": (text or "").strip()[:60]}
+    _save(users)
+
+
+def change_password(name, current, new):
+    if not check(name, current):
+        raise ValueError("the current password is not right")
+    add_user(name, new)
+
+
+def info(name):
+    u = _users().get(name)
+    if not u:
+        return None
+    return {"user": name, "display": u.get("display") or "", "admin": bool(u.get("admin")), "created": u.get("created", "")}
+
+
+def list_users():
+    return [{"user": n, "display": u.get("display") or "", "admin": bool(u.get("admin")), "created": u.get("created", "")} for n, u in _users().items()]
+
+
+# ---- each person's saved settings
+def _prefs_file(name):
+    if not exists(name):
+        raise ValueError("no such user")
+    return PREFS / (name + ".json")
+
+
+def load_prefs(name):
+    try:
+        return json.loads(_prefs_file(name).read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError):
+        return {"ts": 0, "items": {}}
+
+
+def save_prefs(name, items):
+    items = {k: v for k, v in (items or {}).items() if isinstance(k, str) and k.startswith("setupdesk.") and isinstance(v, str)}
+    blob = json.dumps({"ts": int(time.time()), "items": items})
+    if len(blob) > MAX_PREFS:
+        raise ValueError("the saved settings are too large")
+    f = _prefs_file(name)
+    PREFS.mkdir(parents=True, exist_ok=True)
+    tmp = f.with_suffix(".tmp")
+    tmp.write_text(blob, encoding="utf-8")
+    os.replace(tmp, f)
+
+
+def delete_prefs(name):
+    try:
+        _prefs_file(name).unlink()
+    except (FileNotFoundError, ValueError):
+        pass
+
+
 def remove_user(name):
     users = dict(_users())
-    if users.pop(name, None) is None:
+    if name not in users:
         raise ValueError("no such user")
+    if users[name].get("admin") and sum(1 for u in users.values() if u.get("admin")) == 1:
+        raise ValueError("this is the only administrator; make another one first")
+    delete_prefs(name)
+    users.pop(name)
     _save(users)
 
 
@@ -130,9 +200,13 @@ def _secret():
     return KEY.read_bytes()
 
 
+def _ver(user):
+    return hashlib.sha256(_users().get(user, {}).get("hash", "").encode()).hexdigest()[:10]
+
+
 def make_token(user):
     exp = int(time.time()) + SESSION_DAYS * 86400
-    body = base64.urlsafe_b64encode(f"{user}|{exp}".encode("utf-8")).decode().rstrip("=")
+    body = base64.urlsafe_b64encode(f"{user}|{exp}|{_ver(user)}".encode("utf-8")).decode().rstrip("=")
     sig = hmac.new(_secret(), body.encode(), hashlib.sha256).hexdigest()
     return f"{body}.{sig}"
 
@@ -143,8 +217,8 @@ def read_token(tok):
         body, sig = (tok or "").split(".")
         if not hmac.compare_digest(hmac.new(_secret(), body.encode(), hashlib.sha256).hexdigest(), sig):
             return None
-        user, exp = base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)).decode("utf-8").rsplit("|", 1)
-        return user if int(exp) > time.time() and exists(user) else None
+        user, exp, ver = base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)).decode("utf-8").rsplit("|", 2)
+        return user if int(exp) > time.time() and exists(user) and hmac.compare_digest(ver, _ver(user)) else None
     except Exception:
         return None
 
