@@ -506,6 +506,21 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 .ycharts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 4px}.ycharts .card{margin:0}.ycharts small{color:var(--muted)}
 .ybar{display:block;width:100%;height:76px;margin-top:6px}.ylab{display:flex;justify-content:space-between;color:var(--muted);font-size:11.5px}
 @media (max-width:760px){.ycharts{gap:8px}.ycharts .card{padding:10px}.ybar{height:56px}}
+.instbl td:nth-child(2),.instbl td:nth-child(3),.instbl th:nth-child(2),.instbl th:nth-child(3){text-align:left}
+.instbl tr.insmore{display:none}.instbl.all tr.insmore{display:table-row}
+.instbl .rolein{display:none;color:var(--muted)}
+@media (max-width:760px){
+  .instbl,.instbl tbody{display:block}.instbl thead{display:none}
+  .instbl tbody tr,.instbl.all tr.insmore{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"d t c" "w w s";gap:2px 10px;padding:9px 4px;border-bottom:1px solid var(--line)}
+  .instbl tr.insmore{display:none}
+  .instbl td{padding:0;border:0;text-align:left;white-space:normal}
+  .instbl td:nth-child(1){grid-area:d;color:var(--muted)}
+  .instbl td:nth-child(4){grid-area:t;font-weight:600}
+  .instbl td:nth-child(6){grid-area:c;text-align:right;font-weight:600}
+  .instbl td:nth-child(2){grid-area:w;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .instbl td:nth-child(5){grid-area:s;text-align:right;color:var(--muted);font-size:12.5px}
+  .instbl td.role{display:none}.instbl .rolein{display:inline}
+}
 .vm{color:var(--amber);cursor:help;font-size:.85em;margin-left:2px;font-weight:600}
 .bsw{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:0 0 12px;background:var(--panel)}
 .bsw button{border:0;background:none;padding:6px 14px;color:var(--muted);font-size:13px}
@@ -2439,6 +2454,7 @@ function fillFund(d){
     box.insertAdjacentHTML('beforeend',note('Links open the filings on BSE\'s site. Concall transcripts and presentations are not listed yet.'));
   }
 }
+$('#panel').addEventListener('click',e=>{const a=e.target.closest('#insAll');if(a){const t=$('.instbl');const all=t.classList.toggle('all');a.textContent=all?'Show fewer':'Show all '+(t.rows.length-1)+' filings'}});
 $('#panel').addEventListener('click',e=>{
   const fb=e.target.closest('[data-fb]');if(fb){fbasis=fb.dataset.fb;prefs.fbasis=fbasis;save();renderPanel();return}
   const b=e.target.closest('[data-fs]');if(!b)return;
@@ -2455,6 +2471,7 @@ function tPeers(s){
   const P=peerSet(s).sort((x,y)=>y.a.mcap-x.a.mcap);
   return `<p class="sec">${esc(s.sector)} · ${P.length} stocks</p><div class="card scroll"><table><thead><tr><th>Stock</th><th>Price</th><th>Chg%</th><th>PE</th><th>ROCE</th><th>OPM</th><th>Sales YoY</th><th>Result</th></tr></thead><tbody>${P.map(p=>`<tr class="pick" data-s="${p.sym}"><td>${p.sym===s.sym?'<b>'+p.sym+'</b>':p.sym}</td><td>${nf1.format(p.a.last)}</td><td class="${p.a.chg>=0?'up':'down'}">${sgn(p.a.chg)}</td><td>${p.a.pe==null?'—':nf1.format(p.a.pe)+'x'}</td><td>${p.a.roce==null?'—':nf1.format(p.a.roce)+'%'}</td><td>${nf1.format(p.a.opmTtm)}%</td><td>${nf1.format(p.a.salesYoY)}%</td><td><span class="gr gr-${p.a.latestGrade}">${p.a.latestGrade}</span></td></tr>`).join('')}</tbody></table></div>`;
 }
+const INS_SHOW=40;
 function tIns(s){
   if(s.discLoaded===false)return '<div class="card"><p class="mut">Insider filings have not been loaded for this stock yet.</p></div>';
   const mk=s.insider.filter(t=>t.type==='Buy'||t.type==='Sell'),other=s.insider.length-mk.length;
@@ -2462,7 +2479,7 @@ function tIns(s){
   if(!s.insider.length)return '<div class="card"><h4>Last 12 months</h4><p class="mut">No insider filings were reported to NSE in the last 12 months.</p></div>';
   const kind=t=>t.type==='Other'?`<span class="mut" title="Not counted: off-market, ESOP, gift or pledge filings are not purchase or sale decisions">${esc(t.mode||t.txn||'Other')}</span>`:`<span class="${t.type==='Buy'?'up':'down'}">${t.type}</span>`;
   return `<div class="card"><h4>Last 12 months · open market</h4><div class="kv"><span>Bought</span><span class="up">₹${nf2.format(buy)} Cr</span><span>Sold</span><span class="down">₹${nf2.format(sell)} Cr</span><span>Net</span><b class="${net>=0?'up':'down'}">${net>=0?'+':'−'}₹${nf2.format(Math.abs(net))} Cr</b></div><p class="note">${mk.length} open-market trade${mk.length===1?'':'s'}${other?` and ${other} other filing${other===1?'':'s'} (off-market, ESOP, gifts, pledges) that are listed below but not counted`:''}. Turn on “Insider” above the chart to see the trades as markers.</p></div>
-  <div class="card scroll"><table><thead><tr><th>Date</th><th>Who</th><th>Role</th><th>Type</th><th>Shares</th><th>₹ Cr</th></tr></thead><tbody>${s.insider.map(t=>`<tr><td>${t.d}</td><td>${esc(t.who)}</td><td class="mut">${esc(t.cat&&t.cat!=='-'?t.cat:'')}</td><td>${kind(t)}</td><td>${nf0.format(t.qty)}</td><td>${nf2.format(t.val)}</td></tr>`).join('')}</tbody></table></div>`;
+  <div class="card scroll"><table class="instbl"><thead><tr><th>Date</th><th>Who</th><th>Role</th><th>Type</th><th>Shares</th><th>₹ Cr</th></tr></thead><tbody>${s.insider.map((t,i)=>`<tr${i>=INS_SHOW?' class="insmore"':''}><td>${t.d}</td><td>${esc(t.who)}<small class="rolein">${t.cat&&t.cat!=='-'?' · '+esc(t.cat):''}</small></td><td class="mut role">${esc(t.cat&&t.cat!=='-'?t.cat:'')}</td><td>${kind(t)}</td><td>${nf0.format(t.qty)}</td><td>${nf2.format(t.val)}</td></tr>`).join('')}</tbody></table>${s.insider.length>INS_SHOW?`<button class="linkbtn" id="insAll" style="margin:10px 4px 2px">Show all ${s.insider.length} filings</button>`:''}</div>`;
 }
 function tScr(s){
   return `<div class="card"><h4>Saved screens</h4>${SCREENS.map(c=>{const ok=s.a.scr.includes(c.id);return `<div class="check"><span class="m ${ok?'ok':'no'}">${ok?'✓':'✕'}</span><span>${c.name}</span></div>`}).join('')}<p class="note">Pick a screen in the list selector to see every stock that passes it.</p></div>`;
