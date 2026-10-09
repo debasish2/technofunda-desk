@@ -107,8 +107,8 @@ def parse(body):
 def ours(con, sym):
     """Quarters we already hold and trust enough to compare against: not flagged, and not from IndianAPI itself."""
     return {r["qend"]: dict(r) for r in con.execute(
-        "SELECT qend,sales,op,np,basis,source FROM quarter WHERE sym=? AND flags='' AND source!=? AND sales IS NOT NULL AND op IS NOT NULL AND np IS NOT NULL",
-        (sym, SOURCE))}
+        "SELECT qend,sales,op,np,basis,source FROM quarter WHERE sym=? AND flags='' AND source NOT LIKE 'IndianAPI%' AND sales IS NOT NULL AND op IS NOT NULL AND np IS NOT NULL",
+        (sym,))}
 
 
 def check(ia, mine):
@@ -119,6 +119,8 @@ def check(ia, mine):
     ok_sales = [q for q in both if abs(ia[q]["sales"] - mine[q]["sales"]) <= max(SALES_TOL * abs(mine[q]["sales"]), 1.0)]
     if len(ok_sales) < max(2, round(0.75 * len(both))):
         return "mismatch", f"sales agree in only {len(ok_sales)} of {len(both)} common quarters (other company, or another basis)", 1.0, None
+    if both[-1] not in ok_sales:                                  # the newest quarter in common must agree: otherwise the company restated (demerger, merger) and
+        return "break", f"{both[-1]} differs (IndianAPI {ia[both[-1]]['sales']:.0f}, ours {mine[both[-1]]['sales']:.0f}): restated figures would break the series", 1.0, None
     gap = [abs(ia[q]["op"] - mine[q]["op"]) / max(abs(mine[q]["sales"]), 1.0) * 100 for q in ok_sales]
     if statistics.median(gap) > OP_TOL_PP:
         return "op_differs", f"operating profit differs by {statistics.median(gap):.1f} points of sales", 1.0, None
@@ -207,10 +209,11 @@ def fetch_one(con, sym):
 def apply(sym, con=None):
     """Write the stored IndianAPI quarters of `sym` into `quarter`: only where the stock has no row, or only a flagged one. Returns rows added."""
     con = con or _con()
+    con.execute("DELETE FROM quarter WHERE sym=? AND source LIKE 'IndianAPI%'", (sym,))
     f = con.execute("SELECT * FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
     if not f:
+        con.commit()
         return 0
-    con.execute("DELETE FROM quarter WHERE sym=? AND source=?", (sym, SOURCE))
     have = {r["qend"]: r for r in con.execute("SELECT qend, flags, source FROM quarter WHERE sym=?", (sym,))}
     source = (SOURCE + " (profit unchecked)" if f["status"] == "confirmed"
               else SOURCE if abs((f["np_scale"] or 1) - 1) < 1e-9 else SOURCE + " (profit scaled)")
@@ -225,6 +228,23 @@ def apply(sym, con=None):
         n += 1
     con.commit()
     return n
+
+
+def recheck(con=None):
+    """Re-run the agreement test on every accepted stock from the stored quarters (no calls), now that the series is judged at its join as well."""
+    con = con or _con()
+    out = []
+    for f in con.execute("SELECT sym FROM ia_fetch WHERE status='ok'").fetchall():
+        sym = f[0]
+        ia = {r["qend"]: {"sales": r["sales"], "op": r["op"], "np": r["np_raw"]} for r in con.execute("SELECT * FROM ia_quarter WHERE sym=?", (sym,))}
+        con.execute("DELETE FROM quarter WHERE sym=? AND source LIKE 'IndianAPI%'", (sym,))     # compare with what we held before IndianAPI
+        status, detail, scale, basis = check(ia, ours(con, sym))
+        con.execute("UPDATE ia_fetch SET status=?, detail=?, np_scale=?, basis=? WHERE sym=?", (status, detail, scale, basis, sym))
+        if status != "ok":
+            con.execute("DELETE FROM ia_quarter WHERE sym=?", (sym,))
+            out.append((sym, status, detail))
+    con.commit()
+    return out
 
 
 def apply_all(con=None):
@@ -272,7 +292,10 @@ def main(argv):
     mc = float(argv[argv.index("--min-mcap") + 1]) if "--min-mcap" in argv else 500.0
     if "--report" in argv:
         return report(con)
-    if "--apply" in argv:
+    if "--recheck" in argv:
+        for r in recheck(con):
+            print(*r)
+    if "--apply" in argv or "--recheck" in argv:
         print(apply_all(con))
         return
     if "--plan" in argv:
