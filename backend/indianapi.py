@@ -184,8 +184,11 @@ def admit(con, sym, isin):
 def healthy(con):
     """One call for a company IndianAPI certainly knows. Its company search has gone down mid-run before ("Not a valid script_code" for every
     name), and an outage must never be recorded as 'no data' for the stocks asked while it lasted."""
-    code, body = _call(con, "/historical_stats", {"stock_name": "Reliance Industries", "stats": "quarter_results"})
-    return code == 200 and isinstance(body, dict) and "Sales" in body
+    for name in ("Reliance", "Infosys", "Ather Energy"):                # a name can drop out of their index on its own; the search is down only if all fail
+        code, body = _call(con, "/historical_stats", {"stock_name": name, "stats": "quarter_results"})
+        if code == 200 and isinstance(body, dict) and "Sales" in body:
+            return True
+    return False
 
 
 def fetch_one(con, sym):
