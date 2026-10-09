@@ -4,6 +4,9 @@
     python -m backend.indianapi --fetch 100 [--min-mcap 500] # fetch up to 100 stocks (one call each), check them, store the good ones
     python -m backend.indianapi --sym AEGISLOG,DEEPINDS      # fetch these stocks
     python -m backend.indianapi --fetch 20 --retry           # first re-ask the stocks that returned no data
+    python -m backend.indianapi --fetch 2500 --all           # the audit pass: every company in the screener (one call each)
+    python -m backend.indianapi --annual 2500                # yearly results of accepted stocks; fills missing annual profit
+    python -m backend.indianapi --audit-report               # data/ia_audit.csv: quarters where IndianAPI and our row differ
     python -m backend.indianapi --apply                      # write the stored quarters into `quarter` (also done after every Yahoo stitch)
     python -m backend.indianapi --report                     # what was accepted and what was not, and why
 
@@ -197,9 +200,10 @@ def fetch_one(con, sym):
                     status, detail = "no_profile", "NSE code confirmed, but Yahoo has no profile for the stock"
             else:
                 status, detail = "unconfirmed", detail + "; NSE code did not match"
-    con.execute("INSERT OR REPLACE INTO ia_fetch VALUES(?,?,?,?,?,?,?)", (sym, name, datetime.now().isoformat(timespec="seconds"), status, detail, scale, basis))
+    con.execute("INSERT OR REPLACE INTO ia_fetch(sym,name,fetched,status,detail,np_scale,basis,query) VALUES(?,?,?,?,?,?,?,?)",
+                (sym, name, datetime.now().isoformat(timespec="seconds"), status, detail, scale, basis, used_q))
     con.execute("DELETE FROM ia_quarter WHERE sym=?", (sym,))
-    if status in ("ok", "confirmed"):
+    if ia and status not in ("no_data", "unconfirmed", "no_profile"):                    # kept for the audit report even when the stock is not accepted
         con.executemany("INSERT INTO ia_quarter VALUES(?,?,?,?,?,?)",
                         [(sym, q, v["sales"], v["op"], round(v["np"] * scale, 1), v["np"]) for q, v in ia.items()])
     con.commit()
@@ -266,7 +270,86 @@ def targets(con, min_mcap):
     return sorted(out, key=lambda r: -(r["mcap_cr"] or 0))
 
 
-def targets_new(con, min_mcap):
+def targets_all(con, min_mcap=0.0):
+    """Every company already in the screener that IndianAPI has not been asked about, biggest first (the audit pass)."""
+    asked = {r[0] for r in con.execute("SELECT sym FROM ia_fetch")}
+    cap = dict(market.connect().execute("SELECT sym, mcap FROM class").fetchall())
+    rows = con.execute("SELECT sym FROM stock WHERE COALESCE(kind,'corp')='corp'").fetchall()
+    out = [{"sym": r[0], "mcap_cr": round(cap.get(r[0]) or 0)} for r in rows if r[0] not in asked and (cap.get(r[0]) or 0) >= min_mcap]
+    return sorted(out, key=lambda r: -r["mcap_cr"])
+
+
+def parse_annual(body):
+    """{label: {sales, op, np}} for the financial years in a yoy_results reply (the trailing-twelve-months column is left out)."""
+    if not isinstance(body, dict) or "Sales" not in body or "Net Profit" not in body:
+        return {}
+    out = {}
+    for lab, sales in body["Sales"].items():
+        np_ = body["Net Profit"].get(lab)
+        if lab == "TTM" or sales is None or np_ is None:
+            continue
+        out[lab] = {"sales": float(sales), "op": body.get("Operating Profit", {}).get(lab), "np": float(np_)}
+    return out
+
+
+def fetch_annual(con, sym):
+    """One call: the yearly results of an accepted stock."""
+    f = con.execute("SELECT query, np_scale FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
+    if not f or not f["query"]:
+        return "skipped", "not an accepted stock"
+    if used(con) >= monthly_limit():
+        return "limit", "monthly call allowance used up"
+    code, body = _call(con, "/historical_stats", {"stock_name": f["query"], "stats": "yoy_results"})
+    if code == 429:
+        return "limit", "HTTP 429"
+    ann = parse_annual(body) if code == 200 else {}
+    con.execute("DELETE FROM ia_annual WHERE sym=?", (sym,))
+    con.executemany("INSERT INTO ia_annual VALUES(?,?,?,?,?)", [(sym, k, v["sales"], v["op"], v["np"]) for k, v in ann.items()])
+    con.commit()
+    return ("ok", f"{len(ann)} years") if ann else ("no_data", "empty")
+
+
+def apply_annual(sym, con=None):
+    """np_annual (newest first, attributable profit) from IndianAPI's yearly profit, scaled like the quarters, only where Yahoo's list has under four years."""
+    con = con or _con()
+    s = con.execute("SELECT np_annual FROM stock WHERE sym=?", (sym,)).fetchone()
+    have = [x for x in str(s["np_annual"] or "").split(",") if x not in ("", "None")] if s else []
+    f = con.execute("SELECT np_scale FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
+    if not s or not f or len(have) >= 4:
+        return False
+    rows = sorted(con.execute("SELECT label, np FROM ia_annual WHERE sym=?", (sym,)), key=lambda r: datetime.strptime(r["label"], "%b %Y"), reverse=True)
+    if len(rows) < 4:
+        return False
+    con.execute("UPDATE stock SET np_annual=? WHERE sym=?", (",".join(str(round(r["np"] * (f["np_scale"] or 1), 1)) for r in rows[:4]), sym))
+    con.commit()
+    return True
+
+
+def audit_report(con, path):
+    """Every quarter where IndianAPI and our row differ by more than rounding, with our source: the list to look through."""
+    import csv
+    rows = []
+    for r in con.execute("""SELECT i.sym, i.qend, i.sales ia_s, i.op ia_o, i.np_raw ia_n, q.sales s, q.op o, q.np n, q.source, q.basis, f.status, f.np_scale
+                            FROM ia_quarter i JOIN quarter q ON q.sym=i.sym AND q.qend=i.qend JOIN ia_fetch f ON f.sym=i.sym
+                            WHERE q.source NOT LIKE 'IndianAPI%' AND q.flags='' AND q.sales IS NOT NULL AND q.op IS NOT NULL AND q.np IS NOT NULL"""):
+        sc = r["np_scale"] or 1.0
+        dif = []
+        if abs(r["ia_s"] - r["s"]) > max(SALES_TOL * abs(r["s"]), 1.0):
+            dif.append("sales")
+        if abs(r["ia_o"] - r["o"]) / max(abs(r["s"]), 1.0) * 100 > OP_TOL_PP:
+            dif.append("operating profit")
+        if r["status"] == "ok" and abs(r["ia_n"] * sc - r["n"]) > max(5.0, 0.15 * abs(r["n"])):
+            dif.append("net profit")
+        if dif:
+            rows.append([r["sym"], r["qend"], r["status"], r["source"], r["s"], r["ia_s"], r["o"], r["ia_o"], r["n"], round(r["ia_n"] * sc, 1), "; ".join(dif)])
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["symbol", "quarter", "indianapi_status", "our_source", "our_sales", "ia_sales", "our_op", "ia_op", "our_np", "ia_np_scaled", "differs_in"])
+        w.writerows(sorted(rows))
+    return len(rows)
+
+
+def report(con):
     """Stocks in the NSE universe that the screener never loaded (Yahoo had nothing), biggest first; banks and lenders left out."""
     import json
     from . import widen
@@ -299,18 +382,37 @@ def main(argv):
         print(apply_all(con))
         return
     if "--plan" in argv:
-        t = targets_new(con, mc) if "--new" in argv else targets(con, mc)
+        t = targets_new(con, mc) if "--new" in argv else targets_all(con, mc) if "--all" in argv else targets(con, mc)
         print(f"{len(t)} stocks at or above {mc:.0f} Cr have a gap and have not been asked yet; calls used {used(con)} of {monthly_limit()}")
         for r in t[:40]:
-            print(f"  {r['sym']:<12} {(r['mcap_cr'] or 0):>9,} Cr  {', '.join(r.get('gaps', ['never loaded']))}")
+            print(f"  {r['sym']:<12} {(r['mcap_cr'] or 0):>9,} Cr  {', '.join(r.get('gaps', ['company']))}")
         return
     if "--retry" in argv:                                       # ask again about stocks that came back with no data
         con.execute("DELETE FROM ia_fetch WHERE status='no_data'")
         con.commit()
     if "--sym" in argv:
         syms = [s.strip().upper() for s in argv[argv.index("--sym") + 1].split(",") if s.strip()]
+    elif "--annual" in argv:                                    # python -m backend.indianapi --annual 500: yearly results of accepted stocks, those short of annual profit first
+        n = int(argv[argv.index("--annual") + 1])
+        done = {r[0] for r in con.execute("SELECT DISTINCT sym FROM ia_annual")}
+        short = {r["sym"] for r in con.execute("SELECT sym, np_annual FROM stock") if len([x for x in str(r["np_annual"] or "").split(",") if x not in ("", "None")]) < 4}
+        todo = [r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE status IN ('ok','confirmed')") if r[0] not in done]
+        todo = sorted(todo, key=lambda s: s not in short)[:n]
+        filled = 0
+        for sym in todo:
+            status, detail = fetch_annual(con, sym)
+            filled += apply_annual(sym, con) if status == "ok" else 0
+            print(f"{sym:<12} {status:<8} {detail}", flush=True)
+            if status == "limit":
+                break
+        print(f"np_annual filled for {filled} stocks; calls used this month: {used(con)} of {monthly_limit()}")
+        return
+    elif "--audit-report" in argv:
+        path = ROOT / "data" / "ia_audit.csv"
+        print(f"{audit_report(con, path)} differing quarters written to {path}")
+        return
     elif "--fetch" in argv:
-        pool = targets_new(con, mc) if "--new" in argv else targets(con, mc)
+        pool = targets_new(con, mc) if "--new" in argv else targets_all(con, mc) if "--all" in argv else targets(con, mc)
         syms = [r["sym"] for r in pool][:int(argv[argv.index("--fetch") + 1])]
     else:
         print(__doc__)

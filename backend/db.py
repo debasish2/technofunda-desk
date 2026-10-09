@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS quarter (
 CREATE TABLE IF NOT EXISTS ia_quarter (sym TEXT, qend TEXT, sales REAL, op REAL, np REAL, np_raw REAL, PRIMARY KEY (sym, qend));
 CREATE TABLE IF NOT EXISTS ia_fetch (sym TEXT PRIMARY KEY, name TEXT, fetched TEXT, status TEXT, detail TEXT, np_scale REAL, basis TEXT);
 CREATE TABLE IF NOT EXISTS ia_usage (month TEXT PRIMARY KEY, calls INTEGER);
+CREATE TABLE IF NOT EXISTS ia_annual (sym TEXT, label TEXT, sales REAL, op REAL, np REAL, PRIMARY KEY (sym, label));
 """
 
 
@@ -60,6 +61,8 @@ def connect():
         con.execute("ALTER TABLE stock ADD COLUMN debt REAL")                 # total debt in rupee crore (Yahoo's definition, leases included)
     if "np_annual" not in [r[1] for r in con.execute("PRAGMA table_info(stock)")]:
         con.execute("ALTER TABLE stock ADD COLUMN np_annual TEXT")           # net profit of the last four financial years, newest first, rupee crore, comma-separated
+    if "query" not in [r[1] for r in con.execute("PRAGMA table_info(ia_fetch)")]:
+        con.execute("ALTER TABLE ia_fetch ADD COLUMN query TEXT")             # the search text that found the company, so later calls need no guessing
     if "desk" not in [r[1] for r in con.execute("PRAGMA table_info(stock)")]:
         con.execute("ALTER TABLE stock ADD COLUMN desk INTEGER DEFAULT 1")   # 1 = charted on the Desk, 0 = screener only
     return con
