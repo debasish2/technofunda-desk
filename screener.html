@@ -82,6 +82,7 @@ main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:36
 .colpop label{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer}
 .tablebox{overflow:auto;max-height:calc(100vh - 300px);min-height:240px;padding:0;border-radius:14px}
 .tablebox table{border-collapse:separate;border-spacing:0}
+.tablebox .sn{display:inline-block;min-width:2.4em;margin-right:4px;text-align:right;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
 .tablebox thead th{top:0;z-index:2;padding:12px 14px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .tablebox thead th[aria-sort]{color:var(--accent)}
 .tablebox td{padding:0 14px;height:46px;border-bottom:1px solid var(--line)}
@@ -210,7 +211,7 @@ function applyPreset(set){
   run();
 }
 const STAGE={1:'1 · Basing',2:'2 · Advancing',3:'3 · Topping',4:'4 · Declining'};
-const C={sym:['sym','Symbol'],name:['name','Name'],last:['last','Price',v=>nf2.format(v)],chg:['chg','Chg%',v=>`<span class="${v>=0?'up':'down'}">${v>=0?'+':''}${nf2.format(v)}%</span>`],
+const C={sym:['sym','# &nbsp;Symbol'],name:['name','Name'],last:['last','Price',v=>nf2.format(v)],chg:['chg','Chg%',v=>`<span class="${v>=0?'up':'down'}">${v>=0?'+':''}${nf2.format(v)}%</span>`],
  rs:['rs','RS',v=>nf0.format(v)],stage:['stage','Stage',v=>STAGE[v]||'–'],template:['template','Template',v=>nf0.format(v)+'/5'],
  supertrend:['supertrend','Supertrend',v=>v==null?'–':`<span class="tag ${v>0?'up':'down'}">${v>0?'Up':'Down'}</span>`],sar:['sar','SAR',v=>v==null?'–':`<span class="tag ${v>0?'up':'down'}">${v>0?'Up':'Down'}</span>`],
  mansfield:['mansfield','Mansfield',v=>nf1.format(v)+'%'],vs500_55:['vs500_55','vs N500 55d',v=>(v>=0?'+':'')+nf1.format(v)+'%'],momentum:['momentum','Momentum',v=>nf0.format(v)],
@@ -239,8 +240,8 @@ function draw(){
   const q=($('#q').value||'').trim().toLowerCase();
   const so=cols.some(c=>c[0]===sort.k)?sort:{k:'rs',d:-1};      // a sort column that is not shown (a hidden column group) falls back to RS
   const r=rows.filter(x=>!q||x.sym.toLowerCase().includes(q)||String(x.name||'').toLowerCase().includes(q)).sort((a,b)=>{const x=a[so.k],y=b[so.k];return (x==null)-(y==null)||(x>y?1:x<y?-1:0)*so.d});
-  $('#result tbody').innerHTML=r.map(x=>`<tr>${cols.map(([k,,fm])=>{const v=x[k];
-    if(k==='sym')return `<td class="sym"><a href="/?s=${encodeURIComponent(v)}" title="Open ${esc(v)} on the Desk" style="color:var(--ink);text-decoration:none"><b>${esc(v)}</b></a>${newSet.has(v)?' <span class="tag up" title="Matched today, not on the previous session">NEW</span>':''}${x.is_fin?' <span class="tag" title="Bank, lender or insurer: sales = net interest income (or revenue); no margin or ROCE">Fin</span>':''}</td>`;
+  $('#result tbody').innerHTML=r.map((x,i)=>`<tr>${cols.map(([k,,fm])=>{const v=x[k];
+    if(k==='sym')return `<td class="sym"><span class="sn">${i+1}</span><a href="/?s=${encodeURIComponent(v)}" title="Open ${esc(v)} on the Desk" style="color:var(--ink);text-decoration:none"><b>${esc(v)}</b></a>${newSet.has(v)?' <span class="tag up" title="Matched today, not on the previous session">NEW</span>':''}${x.is_fin?' <span class="tag" title="Bank, lender or insurer: sales = net interest income (or revenue); no margin or ROCE">Fin</span>':''}</td>`;
     if(k==='profit_yoy'&&v==null&&x.grade)return `<td class="mut">${x.profit_state==='loss_to_profit'?'Loss → profit':'Loss'}</td>`;
     if(k==='grade'&&v!=null)return `<td>${fm(v)}${x.checked==='u'?' <sup title="Yahoo Finance figure: no company filing has confirmed this quarter yet" style="color:var(--amber);cursor:help;font-weight:600">†</sup>':''}</td>`;
     if(k==='name')return `<td class="mut">${esc(v)}</td>`;if(k==='industry')return `<td class="ind mut" title="${esc(v)}">${v==null?'–':esc(v)}</td>`;return `<td>${v==null?'–':fm(v)}</td>`}).join('')}</tr>`).join('');
