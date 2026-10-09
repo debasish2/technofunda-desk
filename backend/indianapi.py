@@ -6,7 +6,8 @@
     python -m backend.indianapi --fetch 20 --retry           # first re-ask the stocks that returned no data
     python -m backend.indianapi --fetch 2500 --all           # the audit pass: every company in the screener (one call each)
     python -m backend.indianapi --annual 2500                # yearly results of accepted stocks; fills missing annual profit
-    python -m backend.indianapi --stats balancesheet,cashflow,ratios --max-calls 1000   # statements of accepted stocks, biggest first, resumable
+    python -m backend.indianapi --stats all --max-calls 1200   # EVERY statement of accepted stocks in one call each, biggest first, resumable (use this)
+    python -m backend.indianapi --stats balancesheet,cashflow --max-calls 1000   # single statements (costs one call per statement: avoid)
     python -m backend.indianapi --audit-report               # data/ia_audit.csv: quarters where IndianAPI and our row differ
     python -m backend.indianapi --apply                      # write the stored quarters into `quarter` (also done after every Yahoo stitch)
     python -m backend.indianapi --report                     # what was accepted and what was not, and why
@@ -367,7 +368,31 @@ def apply_annual(sym, con=None):
     return True
 
 
-STATS = ("balancesheet", "cashflow", "ratios", "shareholding_pattern_quarterly", "shareholding_pattern_yearly")
+STATS = ("balancesheet", "cashflow", "ratios", "shareholding_pattern_quarterly", "shareholding_pattern_yearly", "profit_loss_stats")
+ALL_KEYS = ("quarter_results", "yoy_results") + STATS              # what stats=all returns, all of it in ONE call
+
+
+def fetch_all(con, sym):
+    """One call with stats=all: every statement of an accepted stock (about 6 times cheaper than asking for each), each kept in ia_stat as sent."""
+    f = con.execute("SELECT query, name FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
+    if not f:
+        return "skipped", "not an accepted stock"
+    query = f["query"] or _search_name(f["name"] or sym)
+    if used(con) >= monthly_limit():
+        return "limit", "monthly call allowance used up"
+    code, body = _call(con, "/historical_stats", {"stock_name": query, "stats": "all"})
+    if code == 429:
+        return "limit", "HTTP 429"
+    if code != 200 or not isinstance(body, dict) or "info" in body or "error" in body or not body:
+        return "no_data", str(body)[:60]
+    now = datetime.now().isoformat(timespec="seconds")
+    n = 0
+    for k, v in body.items():
+        if k in STATS and isinstance(v, dict) and v:
+            con.execute("INSERT OR REPLACE INTO ia_stat VALUES(?,?,?,?)", (sym, k, now, json.dumps(v, separators=(",", ":"))))
+            n += 1
+    con.commit()
+    return ("ok", f"{n} statements") if n else ("no_data", "no statements in the reply")
 
 
 def fetch_stat(con, sym, stat):
@@ -478,10 +503,11 @@ def main(argv):
         print(f"np_annual filled for {filled} stocks; calls used this month: {used(con)} of {monthly_limit()}")
         return
     elif "--stats" in argv:                                     # python -m backend.indianapi --stats balancesheet,cashflow --max-calls 1000
-        wanted = [x for x in argv[argv.index("--stats") + 1].split(",") if x in STATS]
+        want_all = argv[argv.index("--stats") + 1] == "all"
+        wanted = ["cashflow"] if want_all else [x for x in argv[argv.index("--stats") + 1].split(",") if x in STATS]
         cap = int(argv[argv.index("--max-calls") + 1]) if "--max-calls" in argv else 0
         if not wanted or not cap:
-            print("give --stats with any of", ", ".join(STATS), "and --max-calls N (the most calls this run may make)")
+            print("give --stats all (every statement in one call per stock) or any of", ", ".join(STATS), "and --max-calls N (the most calls this run may make)")
             return
         cap_cr = {k: v for k, v in market.connect().execute("SELECT sym, mcap FROM class")}
         accepted = sorted((r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE status IN ('ok','confirmed')")), key=lambda s: -(cap_cr.get(s) or 0))
@@ -496,7 +522,7 @@ def main(argv):
                 print("IndianAPI's company search is not answering: stopping. Run the same command again later.", flush=True)
                 break
             i += 1
-            status, detail = fetch_stat(con, sym, st)
+            status, detail = fetch_all(con, sym) if want_all else fetch_stat(con, sym, st)
             n_ok += status == "ok"
             if status == "limit":
                 print("allowance used up", flush=True)
