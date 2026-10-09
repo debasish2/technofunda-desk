@@ -74,7 +74,14 @@ def _count(con, n=1):
 
 def _call(con, path, params):
     """One HTTP call, counted. Returns (status code, json or text)."""
-    r = requests.get(BASE + path, params=params, headers={"x-api-key": key()}, timeout=60)
+    for attempt in range(5):                          # a sleeping laptop or a dropped network connection: wait and try again
+        try:
+            r = requests.get(BASE + path, params=params, headers={"x-api-key": key()}, timeout=60)
+            break
+        except requests.RequestException:
+            if attempt == 4:
+                raise
+            time.sleep(15 * (attempt + 1))
     _count(con)
     time.sleep(1.1)                                   # the free plan allows one request a second
     try:
@@ -168,6 +175,13 @@ def admit(con, sym, isin):
                 (sym, prof["name"], prof["industry"], isin, prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"], prof["np_annual"],
                  datetime.now().isoformat(timespec="seconds")))
     return True
+
+
+def healthy(con):
+    """One call for a company IndianAPI certainly knows. Its company search has gone down mid-run before ("Not a valid script_code" for every
+    name), and an outage must never be recorded as 'no data' for the stocks asked while it lasted."""
+    code, body = _call(con, "/historical_stats", {"stock_name": "Reliance Industries", "stats": "quarter_results"})
+    return code == 200 and isinstance(body, dict) and "Sales" in body
 
 
 def fetch_one(con, sym):
@@ -294,12 +308,13 @@ def parse_annual(body):
 
 def fetch_annual(con, sym):
     """One call: the yearly results of an accepted stock."""
-    f = con.execute("SELECT query, np_scale FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
-    if not f or not f["query"]:
+    f = con.execute("SELECT query, name, np_scale FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
+    if not f:
         return "skipped", "not an accepted stock"
+    query = f["query"] or _search_name(f["name"] or sym)                  # stocks asked before the query was recorded
     if used(con) >= monthly_limit():
         return "limit", "monthly call allowance used up"
-    code, body = _call(con, "/historical_stats", {"stock_name": f["query"], "stats": "yoy_results"})
+    code, body = _call(con, "/historical_stats", {"stock_name": query, "stats": "yoy_results"})
     if code == 429:
         return "limit", "HTTP 429"
     ann = parse_annual(body) if code == 200 else {}
@@ -375,6 +390,10 @@ def main(argv):
     mc = float(argv[argv.index("--min-mcap") + 1]) if "--min-mcap" in argv else 500.0
     if "--report" in argv:
         return report(con)
+    if "--health" in argv:                                      # exit code 0 when the company search answers (one call)
+        ok = healthy(con)
+        print("IndianAPI search: " + ("up" if ok else "down"))
+        sys.exit(0 if ok else 1)
     if "--recheck" in argv:
         for r in recheck(con):
             print(*r)
@@ -399,7 +418,10 @@ def main(argv):
         todo = [r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE status IN ('ok','confirmed')") if r[0] not in done]
         todo = sorted(todo, key=lambda s: s not in short)[:n]
         filled = 0
-        for sym in todo:
+        for i, sym in enumerate(todo):
+            if i % 50 == 0 and not healthy(con):
+                print("IndianAPI's company search is not answering: stopping. Run the same command again later.", flush=True)
+                break
             status, detail = fetch_annual(con, sym)
             filled += apply_annual(sym, con) if status == "ok" else 0
             print(f"{sym:<12} {status:<8} {detail}", flush=True)
@@ -417,8 +439,22 @@ def main(argv):
     else:
         print(__doc__)
         return
-    for sym in syms:
-        status, detail = fetch_one(con, sym)
+    failures = 0
+    for i, sym in enumerate(syms):
+        if i % 50 == 0 and not healthy(con):
+            print("IndianAPI's company search is not answering (checked with Reliance): stopping so no stock is recorded as 'no data'. Run the same command again later.", flush=True)
+            break
+        try:
+            status, detail = fetch_one(con, sym)
+            failures = 0
+        except Exception as e:                         # one stock failing must not stop the run; ten in a row means the network is down
+            failures += 1
+            print(f"{sym:<12} error      {type(e).__name__}: {e}", flush=True)
+            if failures >= 10:
+                print("ten failures in a row: stopping; run the same command again to carry on", flush=True)
+                break
+            time.sleep(30)
+            continue
         added = apply(sym, con) if status in ("ok", "confirmed") else 0
         print(f"{sym:<12} {status:<10} {detail}" + (f"  (+{added} quarters)" if added else ""), flush=True)
         if status == "limit":
