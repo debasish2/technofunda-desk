@@ -56,6 +56,20 @@ def bars(sym, iv):
     return res
 
 
+def session_bar(sym):
+    """The newest session as one daily candle, built from today's 5-minute bars: {d, o, h, l, c, v, prev_close, asof}, or {why} when Yahoo has none."""
+    from datetime import datetime, timezone
+    r = bars(sym, "5m")
+    B = r["bars"]
+    if not B:
+        return {"why": r.get("why")}
+    day = lambda b: b["t"] // 86400
+    S = [b for b in B if day(b) == day(B[-1])]
+    return {"d": datetime.fromtimestamp(S[0]["t"], timezone.utc).date().isoformat(),          # times were shifted to Indian clock time, so the UTC date is the Indian date
+            "o": S[0]["o"], "h": max(b["h"] for b in S), "l": min(b["l"] for b in S), "c": S[-1]["c"], "v": sum(b["v"] for b in S),
+            "prev_close": r.get("prev_close"), "last_bar": datetime.fromtimestamp(S[-1]["t"], timezone.utc).strftime("%H:%M")}
+
+
 if __name__ == "__main__":
     r = bars(sys.argv[1].upper() if len(sys.argv) > 1 else "TCS", sys.argv[2] if len(sys.argv) > 2 else "5m")
     print({k: (len(v) if isinstance(v, list) else v) for k, v in r.items()})

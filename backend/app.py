@@ -419,6 +419,13 @@ def api_intraday(sym: str, iv: str = "5m"):
         raise HTTPException(400, str(e))
 
 
+@app.get("/api/live/{sym}")
+def api_live(sym: str):
+    """Today's session as one daily candle (from Yahoo's 5-minute bars), for the Desk's daily chart to add to the stored history."""
+    from . import intraday
+    return intraday.session_bar(sym.upper())
+
+
 @app.get("/api/company/{sym}/announcements")
 def api_company_announcements(sym: str, refresh: int = 0):
     """BSE announcements sorted by kind (concalls, credit ratings, everything else) for the Documents sub-tab (see backend/announcements.py)."""

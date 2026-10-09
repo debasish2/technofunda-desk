@@ -1294,7 +1294,7 @@ const indCache=new Map();
 function indCalc(all){
   const out=[];
   for(const e of st.ind){
-    if(!e.on)continue;const D=IND[e.k],key=[cur.sym,st.iv,all.length,e.k,e.p.join()].join('|');
+    if(!e.on)continue;const D=IND[e.k],key=[cur.sym,st.iv,all.length,all[all.length-1].c,e.k,e.p.join()].join('|');
     let ser=indCache.get(key);if(!ser){if(indCache.size>200)indCache.clear();ser=D.calc(all,e.p);indCache.set(key,ser)}
     out.push({e,D,title:D.title(e.p),series:ser});
   }
@@ -2032,7 +2032,7 @@ const TV={chart:null,main:null,sig:'',rangeKey:null,touched:false,applyRange:nul
    if(TV.chart)TV.chart.resize(Math.max(100,Math.floor(r.width)),Math.max(100,Math.floor(r.height)));      // resized here, not by the library, so the re-fit below sees the new width
    const fit=()=>{if(TV.chart&&!TV.touched&&TV.applyRange)TV.applyRange()};clearTimeout(t0);t0=setTimeout(()=>{fit();t0=setTimeout(fit,500)},250)}).observe(w);}   // the chart finishes resizing a moment after its container
 const tvOK=()=>typeof LightweightCharts!=='undefined';
-const tvSig=()=>[cur.sym+'#'+cur.bars.length,st.iv,st.type,st.log,JSON.stringify(st.ind),st.vol,st.grades,st.insider,st.pal,barCols().up,barCols().down,st.vpvr,st.vcp,st.range,st.sel,JSON.stringify(drawings[cur.sym]||[]),st.dHide,st.pat,
+const tvSig=()=>[cur.sym+'#'+cur.bars.length+'@'+cur.bars[cur.bars.length-1].c,st.iv,st.type,st.log,JSON.stringify(st.ind),st.vol,st.grades,st.insider,st.pal,barCols().up,barCols().down,st.vpvr,st.vcp,st.range,st.sel,JSON.stringify(drawings[cur.sym]||[]),st.dHide,st.pat,
   document.documentElement.dataset.theme||'',matchMedia('(prefers-color-scheme: dark)').matches].join('|');
 /* one chart primitive paints every drawing and the consolidation boxes, so they move and scale with the chart */
 class TvShapes{
@@ -2612,7 +2612,7 @@ async function select(sym,keep){
   cur=BY[sym];if(!cur)return;prefs.sym=sym;save();hover=null;pend=null;st.sel=null;st.vis=memVis();dh.undo=[];dh.redo=[];updTools();
   renderHead();renderStats();renderPanel();syncDD();
   if(st.intra)showIntra(st.intra);
-  loadHistory(cur);
+  loadHistory(cur).then(()=>liveBar());               // after the longer history has replaced the bars: it keeps only bars up to the stored last session
   $$('#rows .row').forEach(r=>r.classList.toggle('on',r.dataset.s===sym));
   const on=$('#rows .row.on');if(on)on.scrollIntoView({block:'nearest'});
   draw();renderTable();$('#app').classList.remove('showlist');
@@ -2624,6 +2624,23 @@ $('#listSel').addEventListener('change',async e=>{st.list=e.target.value;if(st.l
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.tab=b.dataset.t;$$('#tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));renderPanel();$('.right').scrollTop=0});
 $('#wlBtn').addEventListener('click',()=>{const i=prefs.watch.indexOf(cur.sym);if(i<0)prefs.watch.push(cur.sym);else prefs.watch.splice(i,1);save();buildSel();renderHead();renderList()});
 /* ---------- intraday: 5m / 15m / 1h bars from Yahoo, drawn in their own chart over the daily one ---------- */
+/* today's candle on the daily chart: the stored history stops at the last nightly load, so the newest session is built from Yahoo's 5-minute bars
+   (added while NSE is open, and in the evening until the nightly load brings the official bar) */
+async function liveBar(){
+  if(!cur||!cur.bars||!cur.bars.length)return;
+  const sym=cur.sym;let j;try{const r=await fetch('/api/live/'+encodeURIComponent(sym));j=r.ok?await r.json():null}catch(e){return}
+  if(!j||!j.d||!cur||cur.sym!==sym)return;
+  const B=cur.bars,last=B[B.length-1];
+  if(j.d<last.d||(j.d===last.d&&!last.live))return;                       // the stored bar for that day is the official one
+  const k50=2/51,k200=2/201,pe50=B.length>1&&B[B.length-1].live?B[B.length-2].e50:last.e50,pe200=B.length>1&&B[B.length-1].live?B[B.length-2].e200:last.e200;
+  const nb={d:j.d,o:j.o,h:j.h,l:j.l,c:j.c,v:j.v,live:true,e50:pe50!=null?pe50+(j.c-pe50)*k50:null,e200:pe200!=null?pe200+(j.c-pe200)*k200:null};
+  let prev;
+  if(j.d===last.d){B[B.length-1]=nb;prev=B.length>1?B[B.length-2].c:j.prev_close}else{B.push(nb);prev=last.c}
+  const a=cur.a;if(prev){a.prev=prev;a.chg=(j.c/prev-1)*100}a.last=j.c;a.vol=j.v;if(a.hi!=null){a.hi=Math.max(a.hi,j.h);a.fromHigh=(a.last/a.hi-1)*100}
+  if(!st.intra){renderHead();renderList();redraw()}
+}
+setInterval(()=>{if(cur&&!st.intra&&!document.hidden&&marketOpenNow())liveBar()},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cur&&!st.intra)liveBar()});
 const ID={chart:null,main:null,vol:null,iv:'',timer:null};
 st.intra='';
 function marketOpenNow(){const n=new Date(Date.now()+19800000),m=n.getUTCHours()*60+n.getUTCMinutes(),d=n.getUTCDay();return d>0&&d<6&&m>=555&&m<=935}
