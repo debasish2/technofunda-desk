@@ -505,6 +505,13 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 @container (max-width:420px){.kvg{grid-template-columns:1fr}}
 .doc{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none}
 .doc:hover span{color:var(--accent)}.doc i{font-style:normal;color:var(--muted);white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.chips a{padding:2px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--accent);text-decoration:none;white-space:nowrap}
+.chips a:hover{background:var(--soft)}
+.annf{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.annf button{padding:3px 11px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+.annf button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.doc .k{flex:none;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 6px;margin-right:8px;white-space:nowrap}
 
 .ycards{grid-template-columns:1fr}.ycards div{display:block}.ycards b{display:block;text-align:left;font-size:13.5px;margin-top:2px}
 .ycharts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 4px}.ycharts .card{margin:0}.ycharts small{color:var(--muted)}
@@ -2296,6 +2303,29 @@ function iaBalanceSheet(j){
   return `<h4 class="ftitle">Balance sheet, ${periods.length} years <small>₹ crore · years ending March</small></h4>`+fTable(periods.map(iaCol),rows)
     +'<p class="note" style="margin:6px 2px 0">Source: IndianAPI, in the same standard layout and rounding (whole rupee crore) as Screener.in, downloaded '+esc(when)+'. Consolidated where the company has subsidiaries. Not checked against the exchange filings.</p>';
 }
+const ANN={};                                                      // symbol -> BSE announcements, sorted by kind (see backend/announcements.py)
+function loadAnn(sym){
+  if(ANN[sym])return Promise.resolve(ANN[sym]);
+  return fetch('/api/company/'+encodeURIComponent(sym)+'/announcements').then(r=>r.ok?r.json():{ok:false,why:'Announcements could not be loaded ('+r.status+').'}).then(j=>{if(j.ok)ANN[sym]=j;return j}).catch(()=>({ok:false,why:'Announcements could not be loaded. Try again in a moment.'}));
+}
+const ANNK=[['all','All'],['result','Results'],['board','Board meetings'],['corp_action','Corporate actions'],['press','Press'],['meeting','Investor meets'],['other','Other']];
+const ANNL={transcript:'Transcript',audio:'Audio',presentation:'Presentation',meeting:'Notice'};
+function annList(a,k){
+  const L=(k==='all'?a.recent:a.recent.filter(x=>x.kind===k)).slice(0,60);
+  return L.length?L.map(x=>{const dt=x.dt.slice(0,10),t=`<span>${esc(x.title)}</span><i>${esc(dt)}</i>`;
+    return x.url?`<a class="doc" href="${esc(x.url)}" target="_blank" rel="noopener">${t}</a>`:`<div class="doc">${t}</div>`}).join(''):'<p class="mut" style="margin:6px 0">Nothing of this kind among the latest announcements.</p>';
+}
+function annHtml(a){
+  if(!a||!a.ok)return `<div class="card"><p class="mut">${esc((a&&a.why)||'Announcements could not be loaded.')}</p></div>`;
+  const mon=m=>new Date(m+'-01T00:00:00Z').toLocaleDateString('en-GB',{month:'short',year:'numeric',timeZone:'UTC'});
+  const by={};a.concalls.forEach(x=>{(by[x.dt.slice(0,7)]=by[x.dt.slice(0,7)]||[]).push(x)});
+  const months=Object.keys(by).sort().reverse().slice(0,10);
+  const conc=months.length?`<div class="card"><h4>Concalls <small class="mut">transcripts, recordings, presentations and meeting notices</small></h4>${months.map(m=>`<div class="doc"><span>${mon(m)}</span><span class="chips">${['transcript','audio','presentation','meeting'].map(k=>{const L=by[m].filter(x=>x.kind===k&&x.url);return L.map((x,i)=>`<a href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.title)}">${ANNL[k]}${L.length>1?' '+(i+1):''}</a>`).join('')}).join('')}</span></div>`).join('')}</div>`:'';
+  const rat=a.ratings.length?`<div class="card"><h4>Credit ratings</h4>${a.ratings.map(x=>x.url?`<a class="doc" href="${esc(x.url)}" target="_blank" rel="noopener"><span>${esc(x.title)}</span><i>${esc(x.dt.slice(0,10))}</i></a>`:`<div class="doc"><span>${esc(x.title)}</span><i>${esc(x.dt.slice(0,10))}</i></div>`).join('')}</div>`:'';
+  const have=new Set(a.recent.map(x=>x.kind));
+  const chips=ANNK.filter(([k])=>k==='all'||have.has(k)).map(([k,l],i)=>`<button type="button" data-ak="${k}" aria-pressed="${i===0}">${l}</button>`).join('');
+  return conc+rat+`<div class="card" id="annCard"><h4>Announcements <small class="mut">latest ${a.recent.length}, from BSE${a.asof?' · updated '+esc(a.asof.replace('T',' ')):''}</small></h4><div class="annf" id="annf">${chips}</div><div id="annl">${annList(a,'all')}</div></div>`;
+}
 const FSUBS=[['about','About'],['quarters','Quarters'],['pl','Profit & Loss'],['yrs','10 Years'],['bs','Balance Sheet'],['cf','Cash Flow'],['ratios','Ratios'],['hold','Shareholding'],['docs','Documents']];
 const CO={};                                                       // symbol -> {data} | {p}
 function loadCompany(sym){
@@ -2505,8 +2535,11 @@ function fillFund(d){
   }
   if(fsub==='docs'){
     const D=d.docs||{},list=(t,a)=>a.length?`<div class="card"><h4>${t}</h4>${a.map(x=>`<a class="doc" href="${esc(x.url)}" target="_blank" rel="noopener"><span>${esc(x.title)}</span><i>${esc(x.date||'')}</i></a>`).join('')}</div>`:'';
-    box.innerHTML=(list('Annual reports',D.annual||[])+list('Results filings (BSE)',D.results||[]))||'<div class="card"><p class="mut">No documents were found for this stock on BSE.</p></div>';
-    box.insertAdjacentHTML('beforeend',note('Links open the filings on BSE\'s site. Concall transcripts and presentations are not listed yet.'));
+    const sym=cur.sym;
+    box.innerHTML=`<div id="annbox"><div class="card"><p class="mut">Loading announcements from BSE…</p></div></div>`+list('Annual reports',D.annual||[])+list('Results filings (BSE)',D.results||[]);
+    box.insertAdjacentHTML('beforeend',note('Links open the filings on BSE\'s site. Concalls, ratings and announcements come from BSE\'s announcements feed for the last twelve months.'));
+    loadAnn(sym).then(a=>{const el=$('#annbox');if(!el||!cur||cur.sym!==sym||fsub!=='docs')return;el.innerHTML=annHtml(a);
+      const f=$('#annf');if(f)f.onclick=e=>{const b=e.target.closest('button');if(!b)return;f.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#annl').innerHTML=annList(a,b.dataset.ak)}});
   }
 }
 $('#panel').addEventListener('click',e=>{const a=e.target.closest('#insAll');if(a){const t=$('.instbl');const all=t.classList.toggle('all');a.textContent=all?'Show fewer':'Show all '+(t.rows.length-1)+' filings'}});

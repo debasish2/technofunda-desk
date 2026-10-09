@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS quarter (
 CREATE TABLE IF NOT EXISTS ia_quarter (sym TEXT, qend TEXT, sales REAL, op REAL, np REAL, np_raw REAL, PRIMARY KEY (sym, qend));
 CREATE TABLE IF NOT EXISTS ia_fetch (sym TEXT PRIMARY KEY, name TEXT, fetched TEXT, status TEXT, detail TEXT, np_scale REAL, basis TEXT);
 CREATE TABLE IF NOT EXISTS ia_usage (month TEXT PRIMARY KEY, calls INTEGER);
+CREATE TABLE IF NOT EXISTS announcement (scrip TEXT, newsid TEXT, dt TEXT, kind TEXT, cat TEXT, subcat TEXT, title TEXT, url TEXT, PRIMARY KEY (scrip, newsid));
+CREATE TABLE IF NOT EXISTS ann_fetch (scrip TEXT PRIMARY KEY, fetched REAL);
 CREATE TABLE IF NOT EXISTS ia_stat (sym TEXT, stat TEXT, fetched TEXT, body TEXT, PRIMARY KEY (sym, stat));
 CREATE TABLE IF NOT EXISTS ia_annual (sym TEXT, label TEXT, sales REAL, op REAL, np REAL, PRIMARY KEY (sym, label));
 """

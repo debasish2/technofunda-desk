@@ -409,6 +409,13 @@ def api_company_standalone(sym: str, refresh: int = 0):
         raise HTTPException(502, f"could not load standalone figures: {type(e).__name__}: {e}")
 
 
+@app.get("/api/company/{sym}/announcements")
+def api_company_announcements(sym: str, refresh: int = 0):
+    """BSE announcements sorted by kind (concalls, credit ratings, everything else) for the Documents sub-tab (see backend/announcements.py)."""
+    from . import announcements
+    return announcements.get(sym.upper(), refresh=bool(refresh))
+
+
 @app.get("/api/company/{sym}/ia/{stat}")
 def api_company_ia(sym: str, stat: str):
     """A statement downloaded from IndianAPI (balancesheet, cashflow, ratios, shareholding...), as sent: {body, fetched}, or {} when we hold none."""
