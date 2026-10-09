@@ -55,7 +55,7 @@ def summary(con, user="me"):
         d0, now, d1, before = latest_two(con, r["id"])
         new = [s for s in now if s not in set(before)] if d1 else []
         out.append({"id": r["id"], "name": r["name"], "filters": json.loads(r["filters"]), "min_value_cr": r["min_value_cr"],
-                    "created": r["created"], "asof": d0, "count": len(now), "new": new, "new_since": d1})
+                    "created": r["created"], "asof": d0, "count": len(now), "new": new, "new_since": d1, "syms": now})
     return out
 
 
