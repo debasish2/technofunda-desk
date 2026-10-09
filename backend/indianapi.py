@@ -6,6 +6,7 @@
     python -m backend.indianapi --fetch 20 --retry           # first re-ask the stocks that returned no data
     python -m backend.indianapi --fetch 2500 --all           # the audit pass: every company in the screener (one call each)
     python -m backend.indianapi --annual 2500                # yearly results of accepted stocks; fills missing annual profit
+    python -m backend.indianapi --stats balancesheet,cashflow,ratios --max-calls 1000   # statements of accepted stocks, biggest first, resumable
     python -m backend.indianapi --audit-report               # data/ia_audit.csv: quarters where IndianAPI and our row differ
     python -m backend.indianapi --apply                      # write the stored quarters into `quarter` (also done after every Yahoo stitch)
     python -m backend.indianapi --report                     # what was accepted and what was not, and why
@@ -20,6 +21,7 @@ Rows are stored in ia_quarter, so a nightly rebuild of `quarter` never loses the
 Source is 'IndianAPI': it shows the unverified mark on the Desk and the Screener, like any figure no filing has confirmed.
 """
 import calendar
+import json
 import math
 import re
 import os
@@ -362,6 +364,27 @@ def apply_annual(sym, con=None):
     return True
 
 
+STATS = ("balancesheet", "cashflow", "ratios", "shareholding_pattern_quarterly", "shareholding_pattern_yearly")
+
+
+def fetch_stat(con, sym, stat):
+    """One call: one statement of an accepted stock, kept as IndianAPI sent it (rows by label, columns by period) in ia_stat."""
+    f = con.execute("SELECT query, name FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
+    if not f:
+        return "skipped", "not an accepted stock"
+    query = f["query"] or _search_name(f["name"] or sym)
+    if used(con) >= monthly_limit():
+        return "limit", "monthly call allowance used up"
+    code, body = _call(con, "/historical_stats", {"stock_name": query, "stats": stat})
+    if code == 429:
+        return "limit", "HTTP 429"
+    if code != 200 or not isinstance(body, dict) or "info" in body or "error" in body or not body:
+        return "no_data", str(body)[:60]
+    con.execute("INSERT OR REPLACE INTO ia_stat VALUES(?,?,?,?)", (sym, stat, datetime.now().isoformat(timespec="seconds"), json.dumps(body, separators=(",", ":"))))
+    con.commit()
+    return "ok", f"{len(body)} rows"
+
+
 def audit_report(con, path):
     """Every quarter where IndianAPI and our row differ by more than rounding, with our source: the list to look through."""
     import csv
@@ -450,6 +473,35 @@ def main(argv):
             if status == "limit":
                 break
         print(f"np_annual filled for {filled} stocks; calls used this month: {used(con)} of {monthly_limit()}")
+        return
+    elif "--stats" in argv:                                     # python -m backend.indianapi --stats balancesheet,cashflow --max-calls 1000
+        wanted = [x for x in argv[argv.index("--stats") + 1].split(",") if x in STATS]
+        cap = int(argv[argv.index("--max-calls") + 1]) if "--max-calls" in argv else 0
+        if not wanted or not cap:
+            print("give --stats with any of", ", ".join(STATS), "and --max-calls N (the most calls this run may make)")
+            return
+        cap_cr = {k: v for k, v in market.connect().execute("SELECT sym, mcap FROM class")}
+        accepted = sorted((r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE status IN ('ok','confirmed')")), key=lambda s: -(cap_cr.get(s) or 0))
+        done = {(r[0], r[1]) for r in con.execute("SELECT sym, stat FROM ia_stat")}
+        todo = [(s, st) for st in wanted for s in accepted if (s, st) not in done]
+        start, n_ok, i = used(con), 0, 0
+        print(f"{len(todo)} downloads to do; this run stops after {cap} calls", flush=True)
+        for sym, st in todo:
+            if used(con) - start >= cap:
+                break
+            if i % 50 == 0 and not healthy(con):
+                print("IndianAPI's company search is not answering: stopping. Run the same command again later.", flush=True)
+                break
+            i += 1
+            status, detail = fetch_stat(con, sym, st)
+            n_ok += status == "ok"
+            if status == "limit":
+                print("allowance used up", flush=True)
+                break
+            if i % 25 == 0:
+                print(f"  {i} calls, {n_ok} stored ({used(con) - start} counted)", flush=True)
+        left = len([1 for t in todo if t not in {(r[0], r[1]) for r in con.execute('SELECT sym, stat FROM ia_stat')}])
+        print(f"stored {n_ok}; {left} downloads still to do; calls used this month (my count): {used(con)}")
         return
     elif "--audit-report" in argv:
         path = ROOT / "data" / "ia_audit.csv"
