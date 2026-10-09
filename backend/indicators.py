@@ -274,8 +274,16 @@ def snapshot(data=None):
 
 
 # ---------------------------------------------------------------- breadth
+def core(wide):
+    """The wide price frames without the SME, InvIT and REIT names: market breadth is about the ordinary NSE equities (EQ and BE series)."""
+    extra = {r[0] for r in market.connect().execute("SELECT sym FROM universe WHERE series IN ('SM','ST','IV','RR')")}
+    keep = [c for c in wide["c"].columns if c not in extra]
+    return {k: v[keep] for k, v in wide.items()}
+
+
 def breadth(data=None, sessions=SESSIONS):
     wide, idx, names = data or load()
+    wide = core(wide)
     C, H, L = wide["c"], wide["h"], wide["l"]
     chg = C.pct_change(fill_method=None)
     e50, e200 = ema(C, 50), ema(C, 200)
@@ -326,6 +334,7 @@ def ma_breadth(data=None, kind="ema", sessions=260, periods=(10, 20, 50, 200), c
     """Share of NSE stocks (closing at Rs 1 or more) trading above their 10, 20, 50 and 200-day moving average, session by session.
     A stock counts on a day only once it has that many bars. Also returns the 50-day average of the %-above-50 line."""
     wide, idx, names = data or load()
+    wide = core(wide)
     C = wide["c"]
     out = {}
     for n in periods:
@@ -350,6 +359,7 @@ def mbi(data=None, kind="sma", thr=4.0, sessions=60):
        NH, NL   stocks making a new 52-week high / low (beyond the previous 252 sessions' extreme)
     Universe: NSE stocks closing at Rs 1 or more that traded the day before."""
     wide, idx, names = data or load()
+    wide = core(wide)
     C, H, L = wide["c"], wide["h"], wide["l"]
     chg = C.pct_change(fill_method=None) * 100
     ok = C.notna() & C.shift(1).notna() & (C >= 1)

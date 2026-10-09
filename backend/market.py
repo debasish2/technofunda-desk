@@ -30,6 +30,9 @@ UNIVERSE_URL = "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv"
 BHAV_URL = "https://nsearchives.nseindia.com/products/content/sec_bhavdata_full_{dmy}.csv"
 INDEX = "^CRSLDX"            # Nifty 500
 SERIES = ("EQ", "BE")        # BE = trade-to-trade segment (e.g. Sterlite, HFCL); still ordinary stocks
+EXTRA_SERIES = ("SM", "ST", "IV", "RR")   # SME platform (normal / trade-to-trade), InvITs, REITs: kept only when they trade enough (MIN_EXTRA_VALUE)
+SME_URL = "https://nsearchives.nseindia.com/emerge/corporates/content/SME_EQUITY_L.csv"
+MIN_EXTRA_VALUE = 1_000_000  # median traded value over the last 20 sessions, rupees: below this an SME or InvIT stock is left out
 CHUNK = 100
 MIN_BARS = 60                # fewer bars than this and a stock is left out (new listings, suspended names)
 IST = ZoneInfo("Asia/Kolkata")
@@ -61,6 +64,76 @@ def nse_equities():
     rows = csv.DictReader(io.StringIO(r.text))
     return [(x["SYMBOL"].strip(), x["NAME OF COMPANY"].strip(), x[" ISIN NUMBER"].strip(), x[" SERIES"].strip())
             for x in rows if x[" SERIES"].strip() in SERIES]
+
+
+def bhav_rows(d):
+    """NSE's end-of-day file for date `d` as dict rows, or None on a holiday / not published."""
+    r = requests.get(BHAV_URL.format(dmy=d.strftime("%d%m%Y")), headers={"User-Agent": "Mozilla/5.0"}, timeout=60)
+    if not r.ok or "SYMBOL" not in r.text[:40].upper():
+        return None
+    rows = list(csv.DictReader(io.StringIO(r.text.replace(" ", ""))))
+    return rows if {x.get("DATE1", "").upper() for x in rows[:50]} == {d.strftime("%d-%b-%Y").upper()} else None
+
+
+def nse_extras():
+    """SME-platform stocks (names from NSE's SME list), InvITs and REITs (symbols from the latest end-of-day file, which has no names)."""
+    out, seen = [], {u[0] for u in nse_equities()}
+    r = requests.get(SME_URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=60)
+    if r.ok:
+        for x in csv.DictReader(io.StringIO(r.text)):
+            sym, ser = (x.get("SYMBOL") or "").strip(), (x.get("SERIES") or "").strip()
+            if sym and ser in EXTRA_SERIES and sym not in seen:
+                out.append((sym, (x.get("NAME_OF_COMPANY") or sym).strip(), (x.get("ISIN_NUMBER") or "").strip(), ser))
+                seen.add(sym)
+    d = date.fromisoformat(last_complete_date())
+    for _ in range(6):
+        rows = bhav_rows(d)
+        if rows:
+            for x in rows:
+                if x["SERIES"] in ("IV", "RR") and x["SYMBOL"] not in seen:
+                    out.append((x["SYMBOL"], x["SYMBOL"], "", x["SERIES"]))
+                    seen.add(x["SYMBOL"])
+            break
+        d -= timedelta(days=1)
+    return out
+
+
+def bhav_history(con, syms, sessions=140, log=print):
+    """Bars for stocks Yahoo does not carry, from NSE's own end-of-day files (raw prices: fine for recent listings)."""
+    want, got, d, tried = set(syms), {}, date.fromisoformat(last_complete_date()), 0
+    while tried < sessions:
+        if d.weekday() < 5:
+            tried += 1
+            rows = bhav_rows(d)
+            for x in rows or []:
+                if x["SYMBOL"] in want:
+                    try:
+                        got.setdefault(x["SYMBOL"], []).append((x["SYMBOL"], d.isoformat(), *(float(x[k]) for k in ("OPEN_PRICE", "HIGH_PRICE", "LOW_PRICE", "CLOSE_PRICE", "TTL_TRD_QNTY"))))
+                    except ValueError:
+                        pass
+        d -= timedelta(days=1)
+    n = 0
+    for s, bars in got.items():
+        if len(bars) >= MIN_BARS:
+            con.executemany("INSERT OR REPLACE INTO mbar VALUES(?,?,?,?,?,?,?)", bars)
+            n += 1
+    con.commit()
+    log(f"NSE files: bars for {n} of {len(want)} stocks Yahoo does not carry")
+    return n
+
+
+def cull_extras(con, log=print):
+    """Drop SME / InvIT / REIT stocks that trade too little to be worth a chart or a screen, and those with too few bars."""
+    keep = {}
+    for s, in con.execute("SELECT sym FROM universe WHERE series IN ('SM','ST','IV','RR')").fetchall():
+        v = [c * q for c, q in con.execute("SELECT c, v FROM mbar WHERE sym=? ORDER BY d DESC LIMIT 20", (s,))]
+        n = con.execute("SELECT COUNT(*) FROM mbar WHERE sym=?", (s,)).fetchone()[0]
+        keep[s] = n >= MIN_BARS and len(v) >= 10 and sorted(v)[len(v) // 2] >= MIN_EXTRA_VALUE
+    drop = [s for s, k in keep.items() if not k]
+    con.executemany("DELETE FROM mbar WHERE sym=?", [(s,) for s in drop])
+    con.executemany("DELETE FROM universe WHERE sym=?", [(s,) for s in drop])
+    con.commit()
+    log(f"SME / InvIT / REIT: {len(keep) - len(drop)} kept, {len(drop)} left out (too few bars or too little trading)")
 
 
 def last_complete_date(now=None):
@@ -119,7 +192,7 @@ def _patch_day(con, d, uni, log):
     add, skipped = [], 0
     for x in rows:
         s = x["SYMBOL"]
-        if s not in uni or x["SERIES"] not in SERIES or s in have:
+        if s not in uni or x["SERIES"] not in SERIES + EXTRA_SERIES or s in have:
             continue
         try:
             o, h, l, c, v = (float(x[k]) for k in ("OPEN_PRICE", "HIGH_PRICE", "LOW_PRICE", "CLOSE_PRICE", "TTL_TRD_QNTY"))
@@ -141,10 +214,16 @@ def load(years=2, log=print, only=None):
     # fetch and sanity-check the inputs BEFORE touching the database, so a failed download on an
     # unattended night leaves yesterday's data intact instead of an empty universe or benchmark
     uni = nse_equities()
+    try:
+        extras = nse_extras()
+    except Exception as e:                                       # the main universe must still load if the extra lists are unavailable
+        extras = []
+        log(f"SME / InvIT lists unavailable ({type(e).__name__}); loading the main universe only")
+    uni += extras
     ix = yf.download(INDEX, period=f"{years}y", interval="1d", progress=False, auto_adjust=True)
     ix = ix["Close"].squeeze().dropna()
-    if len(uni) < 1500:
-        raise RuntimeError(f"NSE universe list has only {len(uni)} symbols; refusing to replace the stored one")
+    if len(uni) - len(extras) < 1500:
+        raise RuntimeError(f"NSE universe list has only {len(uni) - len(extras)} symbols; refusing to replace the stored one")
     if len(ix) < 200:
         raise RuntimeError(f"Nifty 500 download returned {len(ix)} bars; refusing to replace the stored benchmark")
     if only is None:
@@ -182,6 +261,13 @@ def load(years=2, log=print, only=None):
         con.executemany("INSERT OR REPLACE INTO mbar VALUES(?,?,?,?,?,?,?)", rows)
         con.commit()
         log(f"chunk {i // CHUNK + 1}/{(len(syms) + CHUNK - 1) // CHUNK}: {loaded} loaded, {skipped} skipped ({time.time() - t:.0f}s)")
+    ex = [u[0] for u in extras if only is None or u[0] in only]
+    if ex:
+        have = {r[0] for r in con.execute("SELECT DISTINCT sym FROM mbar")}
+        miss = [s for s in ex if s not in have]
+        if miss:
+            bhav_history(con, miss, log=log)
+        cull_extras(con, log)
     return repair(con, log) and (loaded, skipped)
 
 
@@ -248,6 +334,8 @@ def repair(con=None, log=print):
 if __name__ == "__main__":
     if "--repair" in sys.argv:
         repair()
+    elif "--extras" in sys.argv:                    # only the SME / InvIT / REIT names: python -m backend.market --extras
+        print(load(only={u[0] for u in nse_extras()}))
     elif "--be" in sys.argv:                        # only the BE-series names that an earlier load did not have
         con = connect()
         have = {r[0] for r in con.execute("SELECT DISTINCT sym FROM mbar")}
