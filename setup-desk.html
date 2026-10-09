@@ -489,7 +489,9 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
 .ftbl table{width:100%;font-size:13px}
 .ftbl td,.ftbl th{padding:7px 12px}
 .ftbl th{font-size:12px;font-weight:600;color:var(--muted);text-transform:none}
-.ftbl td.lab,.ftbl th.lab{text-align:left;position:sticky;left:0;background:var(--panel);min-width:150px}
+.card.ftbl{padding-left:0;padding-right:0}                                   /* the pinned label column sits flush at the edge: scrolled columns can no longer show through a gap in front of it */
+.ftbl td.lab,.ftbl th.lab{text-align:left;position:sticky;left:0;z-index:1;background:var(--panel);min-width:150px;padding-left:16px;box-shadow:1px 0 0 var(--line)}
+.ftbl td:last-child,.ftbl th:last-child{padding-right:16px}
 .ftbl tr.b td{font-weight:600}
 .ftbl tr.sub td{color:var(--muted);font-size:12.5px}.ftbl tr.sub td.up{color:var(--up)}.ftbl tr.sub td.down{color:var(--down)}
 .card.about .crumb{margin:0 0 10px;color:var(--muted);font-size:12.5px}
@@ -2451,7 +2453,8 @@ function fillFund(d){
       +note('Source: Yahoo Finance annual balance sheets. Banks and insurers are laid out differently, so some lines may be blank for them.'):'';
     const ia=IAS[sym+'|balancesheet'];
     box.innerHTML=`<div id="iabs">${ia?iaBalanceSheet(ia):''}</div>`+(yh||(ia?'':'<div class="card"><p class="mut">No balance sheet is available for this stock.</p></div>'));
-    if(ia===undefined)loadIA(sym,'balancesheet').then(j=>{const el=$('#iabs');if(!el||!cur||cur.sym!==sym||fsub!=='bs')return;if(j)el.innerHTML=iaBalanceSheet(j);
+    {const sc=box.querySelector('#iabs .ftbl');if(sc)sc.scrollLeft=sc.scrollWidth}
+    if(ia===undefined)loadIA(sym,'balancesheet').then(j=>{const el=$('#iabs');if(!el||!cur||cur.sym!==sym||fsub!=='bs')return;if(j){el.innerHTML=iaBalanceSheet(j);const sc=el.querySelector('.ftbl');if(sc)sc.scrollLeft=sc.scrollWidth}
       else if(!t)box.innerHTML='<div class="card"><p class="mut">No balance sheet is available for this stock.</p></div>';
       else{const h=box.querySelector('h4');if(h)h.innerHTML='Balance sheet <small>₹ crore · last four to five years</small>'}});
     return;
