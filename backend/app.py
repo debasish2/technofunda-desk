@@ -409,6 +409,16 @@ def api_company_standalone(sym: str, refresh: int = 0):
         raise HTTPException(502, f"could not load standalone figures: {type(e).__name__}: {e}")
 
 
+@app.get("/api/intraday/{sym}")
+def api_intraday(sym: str, iv: str = "5m"):
+    """5-minute, 15-minute or hourly bars for the Desk's intraday chart (Yahoo Finance, about 15 minutes late; see backend/intraday.py)."""
+    from . import intraday
+    try:
+        return intraday.bars(sym.upper(), iv)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/api/company/{sym}/announcements")
 def api_company_announcements(sym: str, refresh: int = 0):
     """BSE announcements sorted by kind (concalls, credit ratings, everything else) for the Documents sub-tab (see backend/announcements.py)."""

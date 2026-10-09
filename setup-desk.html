@@ -177,6 +177,9 @@ body.fsOn{overflow:hidden}
 .cvwrap{position:relative;flex:1;min-width:0;min-height:0}
 #cv{position:absolute;inset:0;touch-action:pan-y;cursor:crosshair}
 #tvwrap{position:absolute;inset:0}
+#idwrap{position:absolute;inset:0;background:var(--panel);z-index:6}
+.idmsg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);padding:20px;text-align:center;font-size:13px}
+.idleg{position:absolute;left:10px;top:8px;z-index:7;font-size:12px;pointer-events:none;line-height:1.5}
 #legend{z-index:3;position:absolute;left:12px;top:6px;pointer-events:none;font-size:12.5px;line-height:1.55;text-shadow:0 0 3px var(--panel),0 0 3px var(--panel),0 0 2px var(--panel);padding:1px 4px}
 .tablepane{max-height:190px;overflow:auto;border-top:1px solid var(--line)}
 .tablepane table{width:100%}
@@ -598,7 +601,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
       <div class="ctl">
         <div class="dd" id="ddIv"><button class="ddb" title="Bar interval"><span class="ddl">1D</span><i>▾</i></button>
           <div class="seg ddm" id="ivSeg" hidden>
-            <button disabled title="Needs an intraday feed">15m</button><button disabled title="Needs an intraday feed">1h</button><button disabled title="Needs an intraday feed">2h</button>
+            <button data-id="5m" aria-pressed="false" title="5-minute bars, last 5 sessions (about 15 minutes behind)">5m</button><button data-id="15m" aria-pressed="false" title="15-minute bars, last month">15m</button><button data-id="1h" aria-pressed="false" title="Hourly bars, last 6 months">1h</button>
             <button data-iv="D" aria-pressed="true" title="Daily bars">D</button><button data-iv="W" aria-pressed="false" title="Weekly bars">W</button><button data-iv="M" aria-pressed="false" title="Monthly bars">M</button>
           </div></div>
         <div class="dd" id="ddTy"><button class="ddb" title="Chart type"><span class="ddl"></span><i>▾</i></button>
@@ -650,7 +653,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
         <div class="tools" id="tools"></div>
         <div class="flyout" id="fly" hidden></div>
         <div class="flyout objpop" id="objpop" hidden></div>
-        <div class="cvwrap"><canvas id="cv"></canvas><div id="tvwrap" hidden></div><div id="legend"></div><div class="chartbtns" id="chartbtns"><button id="btnLatest" title="Scroll to the most recent bars" hidden><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5l5 5-5 5M11 5l5 5-5 5"/></svg></button></div><div class="cornerbtns" id="cornerbtns"><button id="btnAuto" aria-pressed="true" title="Auto: keep the price scale fitted to the bars on screen. Dragging the price axis switches it off; click to switch it back on." hidden>A</button><button id="logBtn" aria-pressed="true" title="Logarithmic price scale">L</button></div><div id="hint" hidden></div><div id="seltb" class="seltb" hidden></div><div id="pills"></div></div>
+        <div class="cvwrap"><canvas id="cv"></canvas><div id="tvwrap" hidden></div><div id="idwrap" hidden></div><div id="legend"></div><div class="chartbtns" id="chartbtns"><button id="btnLatest" title="Scroll to the most recent bars" hidden><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5l5 5-5 5M11 5l5 5-5 5"/></svg></button></div><div class="cornerbtns" id="cornerbtns"><button id="btnAuto" aria-pressed="true" title="Auto: keep the price scale fitted to the bars on screen. Dragging the price axis switches it off; click to switch it back on." hidden>A</button><button id="logBtn" aria-pressed="true" title="Logarithmic price scale">L</button></div><div id="hint" hidden></div><div id="seltb" class="seltb" hidden></div><div id="pills"></div></div>
 <div class="ctxm" id="ctxm" hidden></div>
       </div>
       <div class="tablepane" id="tablepane" hidden></div>
@@ -2608,6 +2611,7 @@ async function select(sym,keep){
   if(!BY[sym]&&!(await loadOne(sym)))return;               // any stock with prices can be opened
   cur=BY[sym];if(!cur)return;prefs.sym=sym;save();hover=null;pend=null;st.sel=null;st.vis=memVis();dh.undo=[];dh.redo=[];updTools();
   renderHead();renderStats();renderPanel();syncDD();
+  if(st.intra)showIntra(st.intra);
   loadHistory(cur);
   $$('#rows .row').forEach(r=>r.classList.toggle('on',r.dataset.s===sym));
   const on=$('#rows .row.on');if(on)on.scrollIntoView({block:'nearest'});
@@ -2619,11 +2623,71 @@ $('#cols').addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
 $('#listSel').addEventListener('change',async e=>{st.list=e.target.value;if(st.list.startsWith('saved:')){$('#rows').innerHTML='<div class="note" style="padding:14px">Loading…</div>';await savedQuotes(st.list)}renderList()});
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.tab=b.dataset.t;$$('#tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));renderPanel();$('.right').scrollTop=0});
 $('#wlBtn').addEventListener('click',()=>{const i=prefs.watch.indexOf(cur.sym);if(i<0)prefs.watch.push(cur.sym);else prefs.watch.splice(i,1);save();buildSel();renderHead();renderList()});
+/* ---------- intraday: 5m / 15m / 1h bars from Yahoo, drawn in their own chart over the daily one ---------- */
+const ID={chart:null,main:null,vol:null,iv:'',timer:null};
+st.intra='';
+function marketOpenNow(){const n=new Date(Date.now()+19800000),m=n.getUTCHours()*60+n.getUTCMinutes(),d=n.getUTCDay();return d>0&&d<6&&m>=555&&m<=935}
+function hideIntra(){
+  st.intra='';clearInterval(ID.timer);ID.timer=null;
+  if(ID.chart){ID.chart.remove();ID.chart=null}
+  const w=$('#idwrap');if(w){w.hidden=true;w.innerHTML=''}
+  $$('#ivSeg button[data-id]').forEach(x=>x.setAttribute('aria-pressed','false'));syncDD();
+}
+async function showIntra(iv){
+  st.intra=iv;syncDD();const w=$('#idwrap'),sym=cur.sym;w.hidden=false;
+  if(ID.chart){ID.chart.remove();ID.chart=null}
+  w.innerHTML='<div class="idmsg">Loading '+iv+' bars…</div>';
+  clearInterval(ID.timer);ID.timer=setInterval(()=>{if(st.intra&&!document.hidden&&marketOpenNow()&&cur)refreshIntra()},60000);
+  let j;try{const r=await fetch('/api/intraday/'+encodeURIComponent(sym)+'?iv='+iv);j=r.ok?await r.json():{bars:[],why:'Intraday prices could not be loaded ('+r.status+').'}}catch(e){j={bars:[],why:'Intraday prices could not be loaded. Try again in a moment.'}}
+  if(st.intra!==iv||!cur||cur.sym!==sym)return;
+  drawIntra(j,sym);
+}
+async function refreshIntra(){
+  const iv=st.intra,sym=cur.sym;if(!iv||!ID.main)return;
+  try{const j=await (await fetch('/api/intraday/'+encodeURIComponent(sym)+'?iv='+iv)).json();
+    if(st.intra===iv&&cur.sym===sym&&ID.main&&j.bars.length){ID.main.setData(intraSeries(j.bars));if(ID.vol)ID.vol.setData(intraVol(j.bars))}}catch(e){}
+}
+const intraSeries=B=>st.type==='line'?B.map(b=>({time:b.t,value:b.c})):B.map(b=>({time:b.t,open:b.o,high:b.h,low:b.l,close:b.c}));
+const intraVol=B=>{const {up,down}=barCols();return B.map((b,i)=>({time:b.t,value:b.v,color:(b.c>=(i?B[i-1].c:b.o)?up:down)+'88'}))};
+function drawIntra(j,sym){
+  const w=$('#idwrap');if(ID.chart){ID.chart.remove();ID.chart=null}ID.main=ID.vol=null;
+  if(!j.bars||!j.bars.length){w.innerHTML=`<div class="idmsg">${esc(j.why||'No intraday prices for this stock.')}</div>`;return}
+  w.innerHTML='<div class="idleg" id="idleg"></div><div id="idc" style="position:absolute;inset:0"></div>';
+  const C=LightweightCharts,{up,down}=barCols(),el=$('#idc'),B=j.bars;
+  const chart=C.createChart(el,{width:Math.max(100,el.clientWidth),height:Math.max(100,el.clientHeight),
+    layout:{background:{type:'solid',color:col('--panel')},textColor:col('--muted'),fontFamily:FONT,fontSize:12},
+    grid:{vertLines:{visible:false},horzLines:{color:col('--grid')}},
+    rightPriceScale:{borderColor:col('--line'),scaleMargins:{top:.06,bottom:.22}},
+    timeScale:{borderColor:col('--line'),rightOffset:3,timeVisible:true,secondsVisible:false},
+    crosshair:{mode:C.CrosshairMode.Normal,vertLine:{color:col('--muted'),labelBackgroundColor:col('--muted')},horzLine:{color:col('--muted'),labelBackgroundColor:col('--muted')}},
+    localization:{locale:'en-IN'}});
+  const main=st.type==='line'?chart.addSeries(C.LineSeries,{color:col('--accent'),lineWidth:2}):chart.addSeries(C.CandlestickSeries,{upColor:up,downColor:down,borderUpColor:up,borderDownColor:down,wickUpColor:up,wickDownColor:down});
+  main.setData(intraSeries(B));
+  const vol=chart.addSeries(C.HistogramSeries,{priceFormat:{type:'volume'},priceScaleId:'vol',lastValueVisible:false,priceLineVisible:false});
+  vol.priceScale().applyOptions({scaleMargins:{top:.82,bottom:0}});vol.setData(intraVol(B));
+  if(j.prev_close)main.createPriceLine({price:j.prev_close,color:col('--muted'),lineWidth:1,lineStyle:C.LineStyle.Dotted,axisLabelVisible:true,title:'Prev close'});
+  // open on the latest session (or the last 60 hourly bars), older bars are a scroll away
+  const day=t=>Math.floor(t/86400),last=day(B[B.length-1].t);let n=B.filter(b=>day(b.t)===last).length;if(st.intra==='1h')n=Math.max(n,60);
+  const first={from:Math.max(0,B.length-n-2),to:B.length+3};chart.timeScale().setVisibleLogicalRange(first);
+  const leg=$('#idleg'),fmtT=t=>{const d=new Date(t*1000);return d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'UTC'})};
+  const show=b=>{const cl=b.c>=b.o?'class="up"':'class="down"';leg.innerHTML=`<div><b>${esc(cur.name)}</b> <span class="mut">${st.intra} · NSE · ${fmtT(b.t)} · about 15 min delayed</span></div><div>O <span ${cl}>${nf2.format(b.o)}</span> H <span ${cl}>${nf2.format(b.h)}</span> L <span ${cl}>${nf2.format(b.l)}</span> C <span ${cl}>${nf2.format(b.c)}</span> <span class="mut">Vol ${nf0.format(b.v)}</span></div>`};
+  show(B[B.length-1]);
+  const byT=new Map(B.map(b=>[b.t,b]));
+  chart.subscribeCrosshairMove(p=>{const b=p.time!==undefined?byT.get(p.time):null;show(b||B[B.length-1])});
+  let w0=el.clientWidth;                                   // created while the pane was hidden or still settling: show the intended window once it has its real width
+  new ResizeObserver(()=>{if(ID.chart!==chart)return;const nw=el.clientWidth;chart.resize(Math.max(100,nw),Math.max(100,el.clientHeight));if(Math.abs(nw-w0)>60){w0=nw;chart.timeScale().setVisibleLogicalRange(first)}}).observe(el);
+  ID.chart=chart;ID.main=main;ID.vol=vol;
+}
+$('#ivSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.id){$$('#ivSeg button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#ivSeg').hidden=true;if(cur)showIntra(b.dataset.id)}
+  else if(b.dataset.iv&&st.intra)hideIntra();
+});
 function seg(id,attr,key){$('#'+id).addEventListener('click',e=>{const b=e.target.closest('button[data-'+attr+']');if(!b)return;st[key]=b.dataset[attr];if(key==='range'||key==='iv'){st.vis=null;forgetView()}$$('#'+id+' button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#'+id).hidden=true;syncDD();draw();renderTable()})}
 /* the interval, chart type and range controls are drop-downs; this keeps their buttons in step with the state */
 const TY_ICON={candle:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v3M6 14v3M14 2v4M14 13v5"/><rect x="4" y="6" width="4" height="8"/><rect x="12" y="6" width="4" height="7"/></svg>',bar:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v14M6 7H3M6 13h3M14 3v14M14 6h-3M14 12h3"/></svg>',line:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 14l5-5 4 3 7-8"/></svg>'},IV_LBL={D:'1D',W:'1W',M:'1M'};
 function syncDD(){
-  $('#ddIv .ddl').textContent=IV_LBL[st.iv];$('#ddTy .ddl').innerHTML=TY_ICON[st.type];
+  $('#ddIv .ddl').textContent=st.intra||IV_LBL[st.iv];$('#ddTy .ddl').innerHTML=TY_ICON[st.type];
   const pr=document.querySelector('#rgSeg [aria-pressed=true]');$('#ddRg .ddl').textContent=pr?pr.dataset.rg:'Custom';
   const n=st.ind.filter(e=>e.on).length;$('#indN').textContent=n||'';
   let pn=0;if(cur&&cur.bars&&cur.bars.length>30){const all=aggregate(cur.bars,st.iv);pn=consolidations(all,st.iv).filter(b=>b.i1>=all.length-60).length}
