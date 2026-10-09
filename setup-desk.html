@@ -2657,7 +2657,7 @@ function drawIntra(j,sym){
   const chart=C.createChart(el,{width:Math.max(100,el.clientWidth),height:Math.max(100,el.clientHeight),
     layout:{background:{type:'solid',color:col('--panel')},textColor:col('--muted'),fontFamily:FONT,fontSize:12},
     grid:{vertLines:{visible:false},horzLines:{color:col('--grid')}},
-    rightPriceScale:{borderColor:col('--line'),scaleMargins:{top:.06,bottom:.22}},
+    rightPriceScale:{borderColor:col('--line'),scaleMargins:{top:el.clientWidth<520?.2:.06,bottom:.22}},
     timeScale:{borderColor:col('--line'),rightOffset:3,timeVisible:true,secondsVisible:false},
     crosshair:{mode:C.CrosshairMode.Normal,vertLine:{color:col('--muted'),labelBackgroundColor:col('--muted')},horzLine:{color:col('--muted'),labelBackgroundColor:col('--muted')}},
     localization:{locale:'en-IN'}});
@@ -2670,7 +2670,9 @@ function drawIntra(j,sym){
   const day=t=>Math.floor(t/86400),last=day(B[B.length-1].t);let n=B.filter(b=>day(b.t)===last).length;if(st.intra==='1h')n=Math.max(n,60);
   const first={from:Math.max(0,B.length-n-2),to:B.length+3};chart.timeScale().setVisibleLogicalRange(first);
   const leg=$('#idleg'),fmtT=t=>{const d=new Date(t*1000);return d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'UTC'})};
-  const show=b=>{const cl=b.c>=b.o?'class="up"':'class="down"';leg.innerHTML=`<div><b>${esc(cur.name)}</b> <span class="mut">${st.intra} · NSE · ${fmtT(b.t)} · about 15 min delayed</span></div><div>O <span ${cl}>${nf2.format(b.o)}</span> H <span ${cl}>${nf2.format(b.h)}</span> L <span ${cl}>${nf2.format(b.l)}</span> C <span ${cl}>${nf2.format(b.c)}</span> <span class="mut">Vol ${nf0.format(b.v)}</span></div>`};
+  const narrowLeg=el.clientWidth<520;
+  const show=b=>{const cl=b.c>=b.o?'class="up"':'class="down"';leg.style.fontSize=narrowLeg?'11px':'';
+    leg.innerHTML=`<div><b>${esc(narrowLeg?cur.sym:cur.name)}</b> <span class="mut">${st.intra} · ${fmtT(b.t)} · ${narrowLeg?'15 min delay':'NSE · about 15 min delayed'}</span></div><div>O <span ${cl}>${nf2.format(b.o)}</span> H <span ${cl}>${nf2.format(b.h)}</span> L <span ${cl}>${nf2.format(b.l)}</span> C <span ${cl}>${nf2.format(b.c)}</span>${narrowLeg?'':` <span class="mut">Vol ${nf0.format(b.v)}</span>`}</div>`};
   show(B[B.length-1]);
   const byT=new Map(B.map(b=>[b.t,b]));
   chart.subscribeCrosshairMove(p=>{const b=p.time!==undefined?byT.get(p.time):null;show(b||B[B.length-1])});
