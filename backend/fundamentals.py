@@ -97,6 +97,13 @@ def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity
                 cagr3 = ((fy[0] / fy[3]) ** (1 / 3) - 1) * 100
         except ValueError:
             pass
+    cagr_fy = None                                          # annual profit over the last three financial years (two yearly steps), the way the stockscans sites read "3 years"
+    try:
+        fy3 = [float(x) for x in str(np_annual or "").split(",") if x not in ("", "None")]
+        if len(fy3) >= 3 and fy3[0] > 0 and fy3[2] > 0:
+            cagr_fy = ((fy3[0] / fy3[2]) ** 0.5 - 1) * 100
+    except ValueError:
+        pass
     fin = kind == "fin"                       # banks / lenders / insurers: no margin, no ROCE (see financials.py)
     stale = (date.fromisoformat(last_bar_date) - date.fromisoformat(LQ["end"])).days > 200
     return {
@@ -116,7 +123,7 @@ def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity
         "pb": (mcap / equity) if (mcap and equity and equity > 0) else None, "is_fin": fin,
         "roe": (ttm_np / equity * 100) if equity and equity > 0 and not oneoff else None,
         "oneoff": oneoff,
-        "profit_cagr3": cagr3,
+        "profit_cagr3": cagr3, "profit_cagr_fy": cagr_fy,
         "de": None if fin or debt is None or not equity or equity <= 0 else debt / equity,
         "profitable": ttm_np > 0,
     }
@@ -208,6 +215,8 @@ FIELDS = [
      "help": "Market cap over the last 12 months' net profit. Loss-makers have no PE and never pass this filter."},
     {"group": "Fundamentals", "id": "profit_cagr3", "label": "Profit growth, 3-year CAGR >", "type": "min", "unit": "%", "fundamental": True,
      "help": "Net profit of the last four quarters against the four quarters that ended three years earlier, per year; where the quarters do not reach back that far (banks, recent listings), the latest financial year against the one three years earlier. Per-share growth (EPS) is the same unless the share count changed a lot."},
+    {"group": "Fundamentals", "id": "profit_cagr_fy", "label": "Profit growth, last 3 financial years CAGR >", "type": "min", "unit": "%", "fundamental": True,
+     "help": "Annual net profit of the latest financial year against the one two years earlier, per year (three yearly figures, two steps). This is how the stockscans.in 'PAT Growth 3 Years' filter behaved on the 101 stocks of their Techno Funda scan: 80% of their stocks passed it, against 74% for the 3-year figure above. Needs the last three years of annual profit, so stocks with no annual history have no value."},
     {"group": "Fundamentals", "id": "de", "label": "Debt / equity <", "type": "max", "unit": "x", "fundamental": True,
      "help": "Total debt over shareholders' equity from the latest annual balance sheet (Yahoo Finance). Lease liabilities are counted, so it reads a little higher than a borrowings-only ratio."},
     {"group": "Fundamentals", "id": "roce", "label": "ROCE >", "type": "min", "unit": "%", "fundamental": True,

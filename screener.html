@@ -197,7 +197,7 @@ const PRESETS=[
  {name:'Fresh breakouts from a base',set:{consol_breakout:true,stage:'2',rs:[70,99]}},
  {name:'Accelerating earnings + RS leaders',set:{earn_momentum:'Accelerating',opm_expanding:true,rs:[80,99],rs_high:true}},
  {name:'Super growth scan',set:{min_mcap:500,profit_yoy:20,sales_yoy:15,profit_cagr3:15,roce:15,de:1,price_ma:'above_sma50',ma_order:'sma50_200',near_high:15,vs500_252:0,rsi14:55}},
- {name:'Techno Funda',set:{min_mcap:1000,profit_yoy:20,profit_cagr3:15,near_high:15,vs500_252:3,pe:50}}];
+ {name:'Techno Funda',set:{min_mcap:1000,profit_yoy:20,profit_cagr_fy:15,near_high:15,vs500_252:3,pe:50}}];
 function applyPreset(set){
   $('#clear').click();
   for(const [id,v] of Object.entries(set)){
@@ -225,7 +225,7 @@ const COLGROUPS={trend:['Trend & strength',['template','supertrend','sar','mansf
 let colOn={trend:false,patterns:false,industry:false,fund:true};
 try{Object.assign(colOn,JSON.parse(localStorage.getItem('setupdesk.scrcols')||'{}'))}catch(e){}
 const FCOLS=[['grade','Result',v=>`<span class="tag ${GRADE[v]||''}">${esc(v)}</span>`],['sales_yoy','Sales YoY',v=>nf1.format(v)+'%'],
- ['profit_yoy','Profit YoY',v=>nf1.format(v)+'%'],['opm_ttm','OPM 12m',v=>nf1.format(v)+'%'],['pe','PE',v=>nf1.format(v)+'x'],['pb','P/B',v=>nf1.format(v)+'x'],['gnpa_pct','GNPA',v=>nf2.format(v)+'%'],['pledge_pct','Pledge',v=>nf1.format(v)+'%'],['insider_net','Insider ₹Cr',v=>(v>=0?'+':'')+nf2.format(v)],['roce','ROCE',v=>nf1.format(v)+'%'],['de','D/E',v=>nf2.format(v)+'x'],['profit_cagr3','Profit 3y CAGR',v=>nf1.format(v)+'%']];
+ ['profit_yoy','Profit YoY',v=>nf1.format(v)+'%'],['opm_ttm','OPM 12m',v=>nf1.format(v)+'%'],['pe','PE',v=>nf1.format(v)+'x'],['pb','P/B',v=>nf1.format(v)+'x'],['gnpa_pct','GNPA',v=>nf2.format(v)+'%'],['pledge_pct','Pledge',v=>nf1.format(v)+'%'],['insider_net','Insider ₹Cr',v=>(v>=0?'+':'')+nf2.format(v)],['roce','ROCE',v=>nf1.format(v)+'%'],['de','D/E',v=>nf2.format(v)+'x'],['profit_cagr3','Profit 3y CAGR',v=>nf1.format(v)+'%'],['profit_cagr_fy','Profit 3 FY CAGR',v=>nf1.format(v)+'%']];
 let fundUsed=false;
 function buildCols(){
   const c=[C.sym,C.name,C.last,C.chg];

@@ -672,7 +672,7 @@ def api_run(body: dict = Body(...)):
     cols = ["name", "last", "chg", "value_cr", "stage", "template", "supertrend", "sar", "rs", "rs1m", "rs3m", "rs6m",
             "rs12m", "vs500_55", "vs500_123", "mansfield", "momentum", "high52_pct", "consol_bars", "consol_range", "consol_breakout", "vcp_status", "vcp_n", "vcp_last", "vcp_dist",
             "industry", "sector", "ind_3m", "ind_rank_3m", "mcap", "rsi14", "vs500_252"]
-    fcols = ["grade", "sales_yoy", "profit_yoy", "profit_state", "opm_ttm", "pe", "pb", "roce", "gnpa_pct", "nnpa_pct", "pledge_pct", "promo_chg", "insider_net", "latest_q", "is_fin", "checked", "profit_cagr3", "de"]
+    fcols = ["grade", "sales_yoy", "profit_yoy", "profit_state", "opm_ttm", "pe", "pb", "roce", "gnpa_pct", "nnpa_pct", "pledge_pct", "promo_chg", "insider_net", "latest_q", "is_fin", "checked", "profit_cagr3", "profit_cagr_fy", "de"]
     rows = []
     for sym, r in hit.head(int(body.get("limit") or 300)).iterrows():
         d = {"sym": sym, "in_desk": sym in in_desk}
