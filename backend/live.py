@@ -50,7 +50,9 @@ def refresh(force=False, log=log):
     if last is None or last >= today:
         log(f"the end-of-day load already has {last}; no live row needed")
         return None
-    syms = [r[0] for r in con.execute("SELECT sym FROM mbar WHERE d=?", (last,))]
+    # the breadth numbers count ordinary equities only; the SME / InvIT names (many of them unknown to Yahoo) would only add noise and
+    # could push the snapshot under the 80% completeness test below
+    syms = [r[0] for r in con.execute("SELECT sym FROM mbar WHERE d=? AND sym NOT IN (SELECT sym FROM universe WHERE series IN ('SM','ST','IV','RR'))", (last,))]
     rows, t0 = [], time.time()
     for i in range(0, len(syms), market.CHUNK):
         part = syms[i:i + market.CHUNK]
