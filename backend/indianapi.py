@@ -20,6 +20,8 @@ Rows are stored in ia_quarter, so a nightly rebuild of `quarter` never loses the
 Source is 'IndianAPI': it shows the unverified mark on the Desk and the Screener, like any figure no filing has confirmed.
 """
 import calendar
+import math
+import re
 import os
 import statistics
 import sys
@@ -224,6 +226,18 @@ def fetch_one(con, sym):
     return status, detail
 
 
+def unit_slip(ours, theirs):
+    """True when our sales figure is IndianAPI's times 10, 100, 1000 or their fractions (or zero where they have a figure): a lost or doubled unit."""
+    if theirs is None or theirs <= 5:
+        return False
+    if ours is None or abs(ours) < 1e-9:
+        return True
+    if ours < 0:
+        return False
+    k = math.log10(theirs / ours)
+    return any(abs(k - p) < 0.02 for p in (1, 2, 3, -1, -2, -3))
+
+
 def apply(sym, con=None):
     """Write the stored IndianAPI quarters of `sym` into `quarter`: only where the stock has no row, or only a flagged one. Returns rows added."""
     con = con or _con()
@@ -232,17 +246,25 @@ def apply(sym, con=None):
     if not f:
         con.commit()
         return 0
-    have = {r["qend"]: r for r in con.execute("SELECT qend, flags, source FROM quarter WHERE sym=?", (sym,))}
+    have = {r["qend"]: r for r in con.execute("SELECT qend, sales, flags, source FROM quarter WHERE sym=?", (sym,))}
     source = (SOURCE + " (profit unchecked)" if f["status"] == "confirmed"
               else SOURCE if abs((f["np_scale"] or 1) - 1) < 1e-9 else SOURCE + " (profit scaled)")
     n = 0
     for r in con.execute("SELECT * FROM ia_quarter WHERE sym=? ORDER BY qend", (sym,)):
         e = have.get(r["qend"])
+        label = source
         if e is not None and not e["flags"]:
-            continue                                   # a clean row from any source stays
+            # A clean row stays, with two exceptions found by the audit (an accepted stock agrees with us nearly everywhere, so the odd quarter is the error):
+            # a lost or doubled unit in any source, and a Yahoo figure (unverified by any filing) whose sales differ from IndianAPI's.
+            if unit_slip(e["sales"], r["sales"]):
+                label = SOURCE + " (corrects a unit error)"
+            elif e["source"] in ("Yahoo", "Yahoo (PDF disagreed)") and e["sales"] is not None and abs(r["sales"] - e["sales"]) > max(SALES_TOL * abs(e["sales"]), 1.0):
+                label = SOURCE + " (differs from Yahoo)"
+            else:
+                continue
         con.execute("DELETE FROM quarter WHERE sym=? AND qend=?", (sym, r["qend"]))
         con.execute("INSERT INTO quarter(sym,qend,sales,op,np,eps,basis,source,filed,ref,flags) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                    (sym, r["qend"], r["sales"], r["op"], r["np"], None, f["basis"] or "Consolidated", source, None, REF, ""))
+                    (sym, r["qend"], r["sales"], r["op"], r["np"], None, f["basis"] or "Consolidated", label, None, REF, ""))
         n += 1
     con.commit()
     return n
@@ -300,7 +322,7 @@ def parse_annual(body):
     out = {}
     for lab, sales in body["Sales"].items():
         np_ = body["Net Profit"].get(lab)
-        if lab == "TTM" or sales is None or np_ is None:
+        if not re.fullmatch(r"[A-Z][a-z]{2} \d{4}", lab) or sales is None or np_ is None:      # TTM and part-year columns ("Mar 2025  9m") are not financial years
             continue
         out[lab] = {"sales": float(sales), "op": body.get("Operating Profit", {}).get(lab), "np": float(np_)}
     return out
