@@ -88,6 +88,8 @@ def apply_rows(sym, rows, why, con):
                      f"https://finance.yahoo.com/quote/{sym}.NS/financials/", ""))
         added += 1
     con.commit()
+    from . import indianapi                                    # quarters still missing after Yahoo: the stored IndianAPI ones (no call is made)
+    added += indianapi.apply(sym, con)
     return added, why
 
 

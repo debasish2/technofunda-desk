@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS quarter (
   basis TEXT, source TEXT, filed TEXT, ref TEXT, flags TEXT DEFAULT '',
   PRIMARY KEY (sym, qend)
 );
+CREATE TABLE IF NOT EXISTS ia_quarter (sym TEXT, qend TEXT, sales REAL, op REAL, np REAL, np_raw REAL, PRIMARY KEY (sym, qend));
+CREATE TABLE IF NOT EXISTS ia_fetch (sym TEXT PRIMARY KEY, name TEXT, fetched TEXT, status TEXT, detail TEXT, np_scale REAL, basis TEXT);
+CREATE TABLE IF NOT EXISTS ia_usage (month TEXT PRIMARY KEY, calls INTEGER);
 """
 
 

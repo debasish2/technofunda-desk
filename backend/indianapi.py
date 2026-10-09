@@ -1,0 +1,256 @@
+"""Gap-filler from IndianAPI (stock.indianapi.in): quarterly results for stocks our free sources could not complete.
+
+    python -m backend.indianapi --plan [--min-mcap 500]      # which stocks it would fetch, and the calls left this month
+    python -m backend.indianapi --fetch 100 [--min-mcap 500] # fetch up to 100 stocks (one call each), check them, store the good ones
+    python -m backend.indianapi --sym AEGISLOG,DEEPINDS      # fetch these stocks
+    python -m backend.indianapi --fetch 20 --retry           # first re-ask the stocks that returned no data
+    python -m backend.indianapi --apply                      # write the stored quarters into `quarter` (also done after every Yahoo stitch)
+    python -m backend.indianapi --report                     # what was accepted and what was not, and why
+
+The key is read from .env (INDIANAPI_KEY=...), which git ignores. The free plan allows 500 calls a month (INDIANAPI_MONTHLY_LIMIT).
+
+What it is trusted for. IndianAPI's rows are rounded to whole rupee crore, and its "Net Profit" includes minority interest, so it
+only ever fills quarters that are missing or whose own filing parse was flagged; it never replaces a filing or an unflagged row.
+A stock is accepted only if its figures agree with what we already hold for the quarters both have (that also proves the name
+search found the right company). Net profit is scaled by the stock's own attributable/total ratio when that ratio is steady.
+Rows are stored in ia_quarter, so a nightly rebuild of `quarter` never loses them and no call is ever repeated.
+Source is 'IndianAPI': it shows the unverified mark on the Desk and the Screener, like any figure no filing has confirmed.
+"""
+import calendar
+import os
+import statistics
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+import requests
+
+from . import db
+
+ROOT = Path(__file__).resolve().parent.parent
+BASE = "https://stock.indianapi.in"
+SOURCE = "IndianAPI"
+REF = "https://indianapi.in/indian-stock-market"
+FILING = {"NSE XBRL", "BSE PDF", "BSE PDF (OCR)", "NSE PDF", "NSE PDF (OCR)", "BSE PDF (checked)", "Bank PDF"}
+EXPECTED_QUARTER = "2026-06-30"
+SALES_TOL = 0.02          # IndianAPI rounds to whole crore, so also allow 1 crore
+OP_TOL_PP = 3.0           # operating profit may differ by this many points of sales (same rule as stitch.disagrees)
+
+
+def _con():
+    return db.connect()
+
+
+def key():
+    k = os.environ.get("INDIANAPI_KEY")
+    env = ROOT / ".env"
+    if not k and env.exists():
+        for line in env.read_text(encoding="utf-8").splitlines():
+            if line.startswith("INDIANAPI_KEY="):
+                k = line.split("=", 1)[1].strip().strip('"').strip("'")
+    if not k:
+        raise SystemExit("INDIANAPI_KEY is empty: paste the key after the = in .env")
+    return k
+
+
+def monthly_limit():
+    return int(os.environ.get("INDIANAPI_MONTHLY_LIMIT", "500"))
+
+
+def used(con):
+    r = con.execute("SELECT calls FROM ia_usage WHERE month=?", (datetime.now().strftime("%Y-%m"),)).fetchone()
+    return r[0] if r else 0
+
+
+def _count(con, n=1):
+    m = datetime.now().strftime("%Y-%m")
+    con.execute("INSERT INTO ia_usage VALUES(?,?) ON CONFLICT(month) DO UPDATE SET calls=calls+?", (m, n, n))
+    con.commit()
+
+
+def _call(con, path, params):
+    """One HTTP call, counted. Returns (status code, json or text)."""
+    r = requests.get(BASE + path, params=params, headers={"x-api-key": key()}, timeout=60)
+    _count(con)
+    time.sleep(1.1)                                   # the free plan allows one request a second
+    try:
+        return r.status_code, r.json()
+    except ValueError:
+        return r.status_code, r.text[:300]
+
+
+def month_end(label):
+    d = datetime.strptime(label, "%b %Y")
+    return f"{d.year}-{d.month:02d}-{calendar.monthrange(d.year, d.month)[1]:02d}"
+
+
+def parse(body):
+    """{qend: {sales, op, np}} from a quarter_results reply, or (None, why). Banks and lenders use other row names: not supported."""
+    if not isinstance(body, dict):
+        return None, "unexpected reply"
+    if "Sales" not in body or "Operating Profit" not in body or "Net Profit" not in body:
+        return None, "not a company-format statement (bank or lender?)" if "Revenue" in body else "rows missing"
+    out = {}
+    for lab, sales in body["Sales"].items():
+        try:
+            qe = month_end(lab)
+        except ValueError:
+            continue
+        op, np_ = body["Operating Profit"].get(lab), body["Net Profit"].get(lab)
+        if sales is None or op is None or np_ is None:
+            continue
+        out[qe] = {"sales": float(sales), "op": float(op), "np": float(np_)}
+    return out, ""
+
+
+def ours(con, sym):
+    """Quarters we already hold and trust enough to compare against: not flagged, and not from IndianAPI itself."""
+    return {r["qend"]: dict(r) for r in con.execute(
+        "SELECT qend,sales,op,np,basis,source FROM quarter WHERE sym=? AND flags='' AND source!=? AND sales IS NOT NULL AND op IS NOT NULL AND np IS NOT NULL",
+        (sym, SOURCE))}
+
+
+def check(ia, mine):
+    """Compare IndianAPI's quarters with ours. Returns (status, detail, np_scale, basis)."""
+    both = [q for q in sorted(ia) if q in mine]
+    if len(both) < 2:
+        return "no_overlap", f"{len(both)} quarters in common", 1.0, None
+    ok_sales = [q for q in both if abs(ia[q]["sales"] - mine[q]["sales"]) <= max(SALES_TOL * abs(mine[q]["sales"]), 1.0)]
+    if len(ok_sales) < max(2, round(0.75 * len(both))):
+        return "mismatch", f"sales agree in only {len(ok_sales)} of {len(both)} common quarters (other company, or another basis)", 1.0, None
+    gap = [abs(ia[q]["op"] - mine[q]["op"]) / max(abs(mine[q]["sales"]), 1.0) * 100 for q in ok_sales]
+    if statistics.median(gap) > OP_TOL_PP:
+        return "op_differs", f"operating profit differs by {statistics.median(gap):.1f} points of sales", 1.0, None
+    basis = max({mine[q]["basis"] for q in ok_sales}, key=lambda b: sum(mine[q]["basis"] == b for q in ok_sales))
+    ratios = [mine[q]["np"] / ia[q]["np"] for q in ok_sales if ia[q]["np"] >= 5 and mine[q]["np"] > 0]
+    if len(ratios) >= 3:
+        med = statistics.median(ratios)
+        if all(abs(r / med - 1) <= 0.15 for r in ratios) and 0.6 <= med <= 1.03:
+            return "ok", f"{len(ok_sales)} quarters agree; net profit x{med:.3f}", (1.0 if abs(med - 1) <= 0.02 else round(med, 4)), basis
+        return "np_differs", f"attributable/total profit ratio is not steady ({min(ratios):.2f} to {max(ratios):.2f})", 1.0, None
+    if all(abs(ia[q]["np"] - mine[q]["np"]) <= max(3.0, 0.12 * abs(mine[q]["np"])) for q in ok_sales):
+        return "ok", f"{len(ok_sales)} quarters agree (small profits)", 1.0, basis
+    return "np_differs", "net profit differs and there are too few quarters to scale it", 1.0, None
+
+
+def _search_name(name):
+    for suffix in (" Limited", " Ltd.", " Ltd"):
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+    return name.strip()
+
+
+def fetch_one(con, sym):
+    """One stock: search by name, compare with what we hold, store the quarters if they pass."""
+    row = con.execute("SELECT name FROM stock WHERE sym=?", (sym,)).fetchone()
+    name = (row["name"] if row and row["name"] else sym)
+    if used(con) >= monthly_limit():
+        return "limit", "monthly call allowance used up"
+    ia, why = None, "not asked"
+    for q in dict.fromkeys([_search_name(name), sym]):          # the full legal name often finds nothing; the symbol usually does
+        code, body = _call(con, "/historical_stats", {"stock_name": q, "stats": "quarter_results"})
+        if code == 429:
+            return "limit", "HTTP 429"
+        ia, why = parse(body) if code == 200 else (None, f"HTTP {code}")
+        if ia:
+            break
+    if ia is None or not ia:
+        status, detail, scale, basis = "no_data", why or "empty", 1.0, None
+    else:
+        status, detail, scale, basis = check(ia, ours(con, sym))
+    con.execute("INSERT OR REPLACE INTO ia_fetch VALUES(?,?,?,?,?,?,?)", (sym, name, datetime.now().isoformat(timespec="seconds"), status, detail, scale, basis))
+    con.execute("DELETE FROM ia_quarter WHERE sym=?", (sym,))
+    if status == "ok":
+        con.executemany("INSERT INTO ia_quarter VALUES(?,?,?,?,?,?)",
+                        [(sym, q, v["sales"], v["op"], round(v["np"] * scale, 1), v["np"]) for q, v in ia.items()])
+    con.commit()
+    return status, detail
+
+
+def apply(sym, con=None):
+    """Write the stored IndianAPI quarters of `sym` into `quarter`: only where the stock has no row, or only a flagged one. Returns rows added."""
+    con = con or _con()
+    f = con.execute("SELECT * FROM ia_fetch WHERE sym=? AND status='ok'", (sym,)).fetchone()
+    if not f:
+        return 0
+    con.execute("DELETE FROM quarter WHERE sym=? AND source=?", (sym, SOURCE))
+    have = {r["qend"]: r for r in con.execute("SELECT qend, flags, source FROM quarter WHERE sym=?", (sym,))}
+    source = SOURCE if abs((f["np_scale"] or 1) - 1) < 1e-9 else SOURCE + " (profit scaled)"
+    n = 0
+    for r in con.execute("SELECT * FROM ia_quarter WHERE sym=? ORDER BY qend", (sym,)):
+        e = have.get(r["qend"])
+        if e is not None and not e["flags"]:
+            continue                                   # a clean row from any source stays
+        con.execute("DELETE FROM quarter WHERE sym=? AND qend=?", (sym, r["qend"]))
+        con.execute("INSERT INTO quarter(sym,qend,sales,op,np,eps,basis,source,filed,ref,flags) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    (sym, r["qend"], r["sales"], r["op"], r["np"], None, f["basis"] or "Consolidated", source, None, REF, ""))
+        n += 1
+    con.commit()
+    return n
+
+
+def apply_all(con=None):
+    con = con or _con()
+    return {s: n for s in [r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE status='ok'")] if (n := apply(s, con))}
+
+
+def targets(con, min_mcap):
+    """Companies (not banks or lenders) with a results gap, biggest first, that IndianAPI has not been asked about yet."""
+    from . import gaps
+    asked = {r[0] for r in con.execute("SELECT sym FROM ia_fetch")}
+    inbase = {r["sym"] for r in con.execute("SELECT sym FROM stock")}
+    out = []
+    for r in gaps.build():
+        g = set(r["gaps"]) & {"stale", "few_quarters", "no_quarters"}
+        if r["kind"] != "company" or not g or r["sym"] in asked or r["sym"] not in inbase or (r["mcap_cr"] or 0) < min_mcap:
+            continue
+        out.append(r)
+    return sorted(out, key=lambda r: -(r["mcap_cr"] or 0))
+
+
+def report(con):
+    rows = con.execute("SELECT status, COUNT(*) n FROM ia_fetch GROUP BY status ORDER BY n DESC").fetchall()
+    print("Stocks asked about:", ", ".join(f"{r['status']} {r['n']}" for r in rows) or "none")
+    print(f"Calls used this month: {used(con)} of {monthly_limit()}")
+    for r in con.execute("SELECT * FROM ia_fetch WHERE status!='ok' ORDER BY status, sym"):
+        print(f"  {r['sym']:<12} {r['status']:<10} {r['detail']}")
+    n = con.execute("SELECT COUNT(DISTINCT sym) FROM quarter WHERE source LIKE 'IndianAPI%'").fetchone()[0]
+    print(f"Stocks now holding IndianAPI quarters: {n}")
+
+
+def main(argv):
+    con = _con()
+    mc = float(argv[argv.index("--min-mcap") + 1]) if "--min-mcap" in argv else 500.0
+    if "--report" in argv:
+        return report(con)
+    if "--apply" in argv:
+        print(apply_all(con))
+        return
+    if "--plan" in argv:
+        t = targets(con, mc)
+        print(f"{len(t)} stocks at or above {mc:.0f} Cr have a gap and have not been asked yet; calls used {used(con)} of {monthly_limit()}")
+        for r in t[:40]:
+            print(f"  {r['sym']:<12} {r['mcap_cr']:>9,} Cr  {', '.join(r['gaps'])}  newest {r['newest_quarter']} ({r['newest_source']})")
+        return
+    if "--retry" in argv:                                       # ask again about stocks that came back with no data
+        con.execute("DELETE FROM ia_fetch WHERE status='no_data'")
+        con.commit()
+    if "--sym" in argv:
+        syms = [s.strip().upper() for s in argv[argv.index("--sym") + 1].split(",") if s.strip()]
+    elif "--fetch" in argv:
+        syms = [r["sym"] for r in targets(con, mc)][:int(argv[argv.index("--fetch") + 1])]
+    else:
+        print(__doc__)
+        return
+    for sym in syms:
+        status, detail = fetch_one(con, sym)
+        added = apply(sym, con) if status == "ok" else 0
+        print(f"{sym:<12} {status:<10} {detail}" + (f"  (+{added} quarters)" if added else ""), flush=True)
+        if status == "limit":
+            break
+    print(f"calls used this month: {used(con)} of {monthly_limit()}")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
