@@ -1,6 +1,6 @@
 """Gap-filler from IndianAPI (stock.indianapi.in): quarterly results for stocks our free sources could not complete.
 
-    python -m backend.indianapi --plan [--min-mcap 500]      # which stocks it would fetch, and the calls left this month
+    python -m backend.indianapi --plan [--new] [--min-mcap 500]  # (--new: stocks never loaded) which stocks it would fetch, and the calls left this month
     python -m backend.indianapi --fetch 100 [--min-mcap 500] # fetch up to 100 stocks (one call each), check them, store the good ones
     python -m backend.indianapi --sym AEGISLOG,DEEPINDS      # fetch these stocks
     python -m backend.indianapi --fetch 20 --retry           # first re-ask the stocks that returned no data
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import requests
 
-from . import db
+from . import db, market
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = "https://stock.indianapi.in"
@@ -141,27 +141,63 @@ def _search_name(name):
     return name.strip()
 
 
+def confirm(con, query, sym):
+    """(True, isin) when IndianAPI's company profile for `query` carries `sym` as its NSE code."""
+    code, body = _call(con, "/stock", {"name": query})
+    prof = body.get("companyProfile") if code == 200 and isinstance(body, dict) else None
+    if not isinstance(prof, dict):
+        return False, None
+    return (prof.get("exchangeCodeNse") or "").upper() == sym, prof.get("isInId")
+
+
+def admit(con, sym, isin):
+    """Add a stock the screener never held (profile from Yahoo, like the filings route in widen.py). False if Yahoo has no profile."""
+    from .sources import yahoo
+    try:
+        prof = yahoo.profile(sym)
+    except Exception:
+        return False
+    if not prof or not prof.get("name"):
+        return False
+    con.execute("INSERT OR REPLACE INTO stock(sym,name,sector,isin,shares_cr,cap_employed,equity,debt,np_annual,updated,desk) VALUES(?,?,?,?,?,?,?,?,?,?,0)",
+                (sym, prof["name"], prof["industry"], isin, prof["shares_cr"], prof["cap_employed"], prof["equity"], prof["debt"], prof["np_annual"],
+                 datetime.now().isoformat(timespec="seconds")))
+    return True
+
+
 def fetch_one(con, sym):
     """One stock: search by name, compare with what we hold, store the quarters if they pass."""
     row = con.execute("SELECT name FROM stock WHERE sym=?", (sym,)).fetchone()
-    name = (row["name"] if row and row["name"] else sym)
+    name = row["name"] if row and row["name"] else None
+    if not name:
+        u = market.connect().execute("SELECT name FROM universe WHERE sym=?", (sym,)).fetchone()
+        name = u[0] if u and u[0] else sym
     if used(con) >= monthly_limit():
         return "limit", "monthly call allowance used up"
-    ia, why = None, "not asked"
+    ia, why, used_q = None, "not asked", name
     for q in dict.fromkeys([_search_name(name), sym]):          # the full legal name often finds nothing; the symbol usually does
         code, body = _call(con, "/historical_stats", {"stock_name": q, "stats": "quarter_results"})
         if code == 429:
             return "limit", "HTTP 429"
         ia, why = parse(body) if code == 200 else (None, f"HTTP {code}")
         if ia:
+            used_q = q
             break
     if ia is None or not ia:
         status, detail, scale, basis = "no_data", why or "empty", 1.0, None
     else:
         status, detail, scale, basis = check(ia, ours(con, sym))
+        if status == "no_overlap":                              # nothing to compare with: ask for the company profile and read its NSE code
+            same, isin = confirm(con, used_q, sym)
+            if same:
+                status, detail, basis = "confirmed", detail + "; NSE code confirmed, profit not checked", None
+                if not con.execute("SELECT 1 FROM stock WHERE sym=?", (sym,)).fetchone() and not admit(con, sym, isin):
+                    status, detail = "no_profile", "NSE code confirmed, but Yahoo has no profile for the stock"
+            else:
+                status, detail = "unconfirmed", detail + "; NSE code did not match"
     con.execute("INSERT OR REPLACE INTO ia_fetch VALUES(?,?,?,?,?,?,?)", (sym, name, datetime.now().isoformat(timespec="seconds"), status, detail, scale, basis))
     con.execute("DELETE FROM ia_quarter WHERE sym=?", (sym,))
-    if status == "ok":
+    if status in ("ok", "confirmed"):
         con.executemany("INSERT INTO ia_quarter VALUES(?,?,?,?,?,?)",
                         [(sym, q, v["sales"], v["op"], round(v["np"] * scale, 1), v["np"]) for q, v in ia.items()])
     con.commit()
@@ -171,12 +207,13 @@ def fetch_one(con, sym):
 def apply(sym, con=None):
     """Write the stored IndianAPI quarters of `sym` into `quarter`: only where the stock has no row, or only a flagged one. Returns rows added."""
     con = con or _con()
-    f = con.execute("SELECT * FROM ia_fetch WHERE sym=? AND status='ok'", (sym,)).fetchone()
+    f = con.execute("SELECT * FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
     if not f:
         return 0
     con.execute("DELETE FROM quarter WHERE sym=? AND source=?", (sym, SOURCE))
     have = {r["qend"]: r for r in con.execute("SELECT qend, flags, source FROM quarter WHERE sym=?", (sym,))}
-    source = SOURCE if abs((f["np_scale"] or 1) - 1) < 1e-9 else SOURCE + " (profit scaled)"
+    source = (SOURCE + " (profit unchecked)" if f["status"] == "confirmed"
+              else SOURCE if abs((f["np_scale"] or 1) - 1) < 1e-9 else SOURCE + " (profit scaled)")
     n = 0
     for r in con.execute("SELECT * FROM ia_quarter WHERE sym=? ORDER BY qend", (sym,)):
         e = have.get(r["qend"])
@@ -192,7 +229,7 @@ def apply(sym, con=None):
 
 def apply_all(con=None):
     con = con or _con()
-    return {s: n for s in [r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE status='ok'")] if (n := apply(s, con))}
+    return {s: n for s in [r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE status IN ('ok','confirmed')")] if (n := apply(s, con))}
 
 
 def targets(con, min_mcap):
@@ -207,6 +244,17 @@ def targets(con, min_mcap):
             continue
         out.append(r)
     return sorted(out, key=lambda r: -(r["mcap_cr"] or 0))
+
+
+def targets_new(con, min_mcap):
+    """Stocks in the NSE universe that the screener never loaded (Yahoo had nothing), biggest first; banks and lenders left out."""
+    import json
+    from . import widen
+    skipped = json.loads(widen.SKIPPED.read_text(encoding="utf-8")) if widen.SKIPPED.exists() else {}
+    asked = {r[0] for r in con.execute("SELECT sym FROM ia_fetch")}
+    have = {r[0] for r in con.execute("SELECT sym FROM stock")}
+    rows = market.connect().execute("SELECT u.sym, c.mcap FROM universe u JOIN class c ON c.sym=u.sym WHERE c.mcap >= ? ORDER BY c.mcap DESC", (min_mcap,)).fetchall()
+    return [{"sym": r[0], "mcap_cr": round(r[1])} for r in rows if r[0] not in have and r[0] not in asked and skipped.get(r[0]) != "financial company"]
 
 
 def report(con):
@@ -228,10 +276,10 @@ def main(argv):
         print(apply_all(con))
         return
     if "--plan" in argv:
-        t = targets(con, mc)
+        t = targets_new(con, mc) if "--new" in argv else targets(con, mc)
         print(f"{len(t)} stocks at or above {mc:.0f} Cr have a gap and have not been asked yet; calls used {used(con)} of {monthly_limit()}")
         for r in t[:40]:
-            print(f"  {r['sym']:<12} {r['mcap_cr']:>9,} Cr  {', '.join(r['gaps'])}  newest {r['newest_quarter']} ({r['newest_source']})")
+            print(f"  {r['sym']:<12} {(r['mcap_cr'] or 0):>9,} Cr  {', '.join(r.get('gaps', ['never loaded']))}")
         return
     if "--retry" in argv:                                       # ask again about stocks that came back with no data
         con.execute("DELETE FROM ia_fetch WHERE status='no_data'")
@@ -239,13 +287,14 @@ def main(argv):
     if "--sym" in argv:
         syms = [s.strip().upper() for s in argv[argv.index("--sym") + 1].split(",") if s.strip()]
     elif "--fetch" in argv:
-        syms = [r["sym"] for r in targets(con, mc)][:int(argv[argv.index("--fetch") + 1])]
+        pool = targets_new(con, mc) if "--new" in argv else targets(con, mc)
+        syms = [r["sym"] for r in pool][:int(argv[argv.index("--fetch") + 1])]
     else:
         print(__doc__)
         return
     for sym in syms:
         status, detail = fetch_one(con, sym)
-        added = apply(sym, con) if status == "ok" else 0
+        added = apply(sym, con) if status in ("ok", "confirmed") else 0
         print(f"{sym:<12} {status:<10} {detail}" + (f"  (+{added} quarters)" if added else ""), flush=True)
         if status == "limit":
             break
