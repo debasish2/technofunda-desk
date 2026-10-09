@@ -2270,6 +2270,30 @@ function tFundOverview(s){
 
 /* ---------- Fundamentals sub-tabs: About, Quarters, Profit & Loss, Balance Sheet, Cash Flow, Ratios, Shareholding, Documents ---------- */
 let fsub=prefs.fsub||'about';
+const IAS={};                                                      // 'SYM|statement' -> {body, fetched} | null
+function loadIA(sym,stat){
+  const k=sym+'|'+stat;if(IAS[k]!==undefined)return Promise.resolve(IAS[k]);
+  return fetch('/api/company/'+encodeURIComponent(sym)+'/ia/'+stat).then(r=>r.ok?r.json():{}).then(j=>{IAS[k]=j&&j.body?j:null;return IAS[k]}).catch(()=>null);
+}
+const iaCol=l=>l.replace(/ 20(\d\d)$/,' $1');
+function iaBalanceSheet(j){
+  const b=j.body,labs=Object.keys(b);if(!labs.length)return '';
+  const periods=Object.keys(b[labs[0]]);
+  const row=l=>periods.map(p=>b[l]?b[l][p]:null);
+  const rows=labs.map(l=>[l,row(l),{bold:/^Total/.test(l),d:0}]);
+  if(b['Equity Capital']&&b['Reserves']){                       // companies (banks and lenders use other lines): net worth, debt against it, growth
+    const eq=row('Equity Capital'),rs=row('Reserves'),nw=eq.map((v,i)=>v!=null&&rs[i]!=null?v+rs[i]:null);
+    rows.splice(2,0,['Net worth (equity + reserves)',nw,{bold:1,d:0}]);
+    if(b['Borrowings']){const br=row('Borrowings');
+      rows.push(['Borrowings / net worth',br.map((v,i)=>v!=null&&nw[i]>0?v/nw[i]:null),{d:2,sub:1}]);
+      rows.push(['Net worth growth',growth(nw),{pct:1,pctCls:1,sub:1}]);
+      rows.push(['Borrowings growth',growth(br),{pct:1,pctCls:1,sub:1}]);}
+    if(b['Total Assets'])rows.push(['Total assets growth',growth(row('Total Assets')),{pct:1,pctCls:1,sub:1}]);
+  }
+  const when=(j.fetched||'').slice(0,10);
+  return `<h4 class="ftitle">Balance sheet, ${periods.length} years <small>₹ crore · years ending March</small></h4>`+fTable(periods.map(iaCol),rows)
+    +'<p class="note" style="margin:6px 2px 0">Source: IndianAPI, in the same standard layout and rounding (whole rupee crore) as Screener.in, downloaded '+esc(when)+'. Consolidated where the company has subsidiaries. Not checked against the exchange filings.</p>';
+}
 const FSUBS=[['about','About'],['quarters','Quarters'],['pl','Profit & Loss'],['yrs','10 Years'],['bs','Balance Sheet'],['cf','Cash Flow'],['ratios','Ratios'],['hold','Shareholding'],['docs','Documents']];
 const CO={};                                                       // symbol -> {data} | {p}
 function loadCompany(sym){
@@ -2422,9 +2446,14 @@ function fillFund(d){
     return;
   }
   if(fsub==='bs'){
-    const t=d.bs;if(!t){box.innerHTML='<div class="card"><p class="mut">No balance sheet is available from the free source for this stock.</p></div>';return}
-    box.innerHTML=`<h4 class="ftitle">Balance sheet <small>₹ crore</small></h4>`+fTable(t.periods.map(monYr),t.rows.map(([l,v])=>[l,v,{bold:/^(Total|Equity)/.test(l)}]))
-      +note('Source: Yahoo Finance annual balance sheets, last four to five years. Banks and insurers are laid out differently, so some lines may be blank for them.');
+    const t=d.bs,sym=cur.sym;
+    const yh=t?`<h4 class="ftitle">Balance sheet, more detail <small>₹ crore · last four to five years</small></h4>`+fTable(t.periods.map(monYr),t.rows.map(([l,v])=>[l,v,{bold:/^(Total|Equity)/.test(l)}]))
+      +note('Source: Yahoo Finance annual balance sheets. Banks and insurers are laid out differently, so some lines may be blank for them.'):'';
+    const ia=IAS[sym+'|balancesheet'];
+    box.innerHTML=`<div id="iabs">${ia?iaBalanceSheet(ia):''}</div>`+(yh||(ia?'':'<div class="card"><p class="mut">No balance sheet is available for this stock.</p></div>'));
+    if(ia===undefined)loadIA(sym,'balancesheet').then(j=>{const el=$('#iabs');if(!el||!cur||cur.sym!==sym||fsub!=='bs')return;if(j)el.innerHTML=iaBalanceSheet(j);
+      else if(!t)box.innerHTML='<div class="card"><p class="mut">No balance sheet is available for this stock.</p></div>';
+      else{const h=box.querySelector('h4');if(h)h.innerHTML='Balance sheet <small>₹ crore · last four to five years</small>'}});
     return;
   }
   if(fsub==='cf'){

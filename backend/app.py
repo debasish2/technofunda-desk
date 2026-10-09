@@ -409,6 +409,17 @@ def api_company_standalone(sym: str, refresh: int = 0):
         raise HTTPException(502, f"could not load standalone figures: {type(e).__name__}: {e}")
 
 
+@app.get("/api/company/{sym}/ia/{stat}")
+def api_company_ia(sym: str, stat: str):
+    """A statement downloaded from IndianAPI (balancesheet, cashflow, ratios, shareholding...), as sent: {body, fetched}, or {} when we hold none."""
+    import json as _json
+    from . import indianapi
+    if stat not in indianapi.STATS:
+        raise HTTPException(404, "unknown statement")
+    r = db.connect().execute("SELECT body, fetched FROM ia_stat WHERE sym=? AND stat=?", (sym.upper(), stat)).fetchone()
+    return {"body": _json.loads(r["body"]), "fetched": r["fetched"]} if r else {}
+
+
 @app.get("/api/company/{sym}/years")
 def api_company_years(sym: str, refresh: int = 0):
     """Ten financial years, consolidated and standalone, for the Desk's 10 Years tab (first call for a stock takes up to a minute)."""
