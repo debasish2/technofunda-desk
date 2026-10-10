@@ -469,6 +469,69 @@ def fetch_all_unasked(con, sym):
     return "ok", f"{n} statements, net profit agrees in {len(good)} of {len(common)} quarters"
 
 
+def _variants(sym, names):
+    """Search texts to try for one company: its names with and without the usual suffixes and punctuation, shortened forms, then the symbol."""
+    out = []
+    for name in names:
+        if not name:
+            continue
+        n = _search_name(name)
+        out += [n, n.replace(" & ", " and "), re.sub(r"^The\s+", "", n), re.sub(r"[^A-Za-z0-9 ]", " ", n), " ".join(n.split()[:2]), " ".join(n.split()[:3])]
+    out += [sym, sym.replace("-", ""), sym.replace("-", " ")]
+    seen = []
+    for q in out:
+        q = re.sub(r"\s+", " ", q).strip()
+        if q and q not in seen:
+            seen.append(q)
+    return seen[:9]
+
+
+def fetch_all_variants(con, sym):
+    """The hard cases: try several search texts for a company IndianAPI did not find by its usual name, and accept only a reply that is verified
+    (net profit agrees with our quarters, or the profile's NSE code is the symbol). Stores the statements only."""
+    names = []
+    for sql in ("SELECT name FROM stock WHERE sym=?", "SELECT name FROM ia_fetch WHERE sym=?"):
+        r = con.execute(sql, (sym,)).fetchone()
+        if r and r[0]:
+            names.append(r[0])
+    u = market.connect().execute("SELECT name FROM universe WHERE sym=?", (sym,)).fetchone()
+    if u and u[0]:
+        names.append(u[0])
+    mine = {r["qend"]: r["np"] for r in con.execute("SELECT qend,np FROM quarter WHERE sym=? AND np IS NOT NULL", (sym,))}
+    tried = []
+    for q in _variants(sym, names):
+        if used(con) >= monthly_limit():
+            return "limit", "monthly call allowance used up"
+        code, body = _call(con, "/historical_stats", {"stock_name": q, "stats": "all"})
+        if code == 429:
+            return "limit", "HTTP 429"
+        if not (code == 200 and isinstance(body, dict) and isinstance(body.get("quarter_results"), dict)):
+            tried.append(q)
+            continue
+        npr = body["quarter_results"].get("Net Profit") or {}
+        common = [(month_end(l), v) for l, v in npr.items() if v is not None and month_end(l) in mine]
+        good = [1 for qe, v in common if abs(v - mine[qe]) <= max(0.03 * abs(mine[qe]), 2.0)]
+        ok = len(common) >= 2 and len(good) >= max(2, round(0.7 * len(common)))
+        how = f"net profit agrees in {len(good)} of {len(common)} quarters"
+        if not ok:
+            same, _ = confirm(con, q, sym)
+            ok, how = same, "NSE code confirmed"
+        if not ok:
+            tried.append(q + " (wrong company)")
+            continue
+        now = datetime.now().isoformat(timespec="seconds")
+        con.execute("INSERT OR REPLACE INTO ia_fetch(sym,name,fetched,status,detail,np_scale,basis,query) VALUES(?,?,?,?,?,?,?,?)",
+                    (sym, names[0] if names else sym, now, "stats_only", f"statements only; found as '{q}'; {how}", 1.0, None, q))
+        n = 0
+        for k, v in body.items():
+            if k in ALL_KEYS and isinstance(v, dict) and v:
+                con.execute("INSERT OR REPLACE INTO ia_stat VALUES(?,?,?,?)", (sym, k, now, json.dumps(v, separators=(",", ":"))))
+                n += 1
+        con.commit()
+        return "ok", f"found as '{q}' ({how}); {n} statements"
+    return "unconfirmed", "not found: tried " + " | ".join(tried[:9])
+
+
 def fetch_stat(con, sym, stat):
     """One call: one statement of an accepted stock, kept as IndianAPI sent it (rows by label, columns by period) in ia_stat."""
     f = con.execute("SELECT query, name FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed','np_differs','op_differs','break','stats_only')", (sym,)).fetchone()
@@ -602,6 +665,29 @@ def main(argv):
             if status == "limit":
                 break
         print(f"stored {n_ok} of {tried} tried; calls used this month (my count): {used(con)}")
+        return
+    elif "--variants" in argv:                                  # python -m backend.indianapi --variants --min-cap 1000 --max-calls 400
+        cap = int(argv[argv.index("--max-calls") + 1]) if "--max-calls" in argv else 0
+        mc = float(argv[argv.index("--min-cap") + 1]) if "--min-cap" in argv else 1000.0
+        if not cap:
+            print("give --max-calls N")
+            return
+        mcon = market.connect()
+        have = {r[0] for r in con.execute("SELECT sym FROM main.ia_stat WHERE stat='yoy_results'")}
+        mcap = dict(mcon.execute("SELECT sym, mcap FROM class").fetchall())
+        todo = [r[0] for r in mcon.execute("SELECT sym FROM universe WHERE COALESCE(series,'EQ') IN ('EQ','BE')") if r[0] not in have and (mcap.get(r[0]) or 0) >= mc]
+        todo.sort(key=lambda x: -(mcap.get(x) or 0))
+        print(f"{len(todo)} stocks of at least {mc:.0f} Cr still without statements; this run stops after {cap} calls", flush=True)
+        start, n_ok = used(con), 0
+        for sym in todo:
+            if used(con) - start >= cap:
+                break
+            status, detail = fetch_all_variants(con, sym)
+            n_ok += status == "ok"
+            print(f"{sym:<12} {status:<11} {detail[:150]}", flush=True)
+            if status == "limit":
+                break
+        print(f"stored {n_ok} of {len(todo)}; calls used this month (my count): {used(con)}")
         return
     elif "--banks" in argv:                                     # python -m backend.indianapi --banks --max-calls 300: banks, lenders and insurers (never asked before)
         cap = int(argv[argv.index("--max-calls") + 1]) if "--max-calls" in argv else 0

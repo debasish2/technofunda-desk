@@ -649,6 +649,43 @@ def industries_page():
     return FileResponse(ROOT / "industries.html")
 
 
+@app.get("/events")
+def events_page():
+    return FileResponse(ROOT / "events.html")
+
+
+@app.get("/api/events/ipos")
+def api_events_ipos(refresh: int = 0):
+    """IPOs: open, upcoming and the last 500 days of closed and listed issues, from NSE (see backend/feeds.py)."""
+    from . import feeds
+    return feeds.ipos(refresh=bool(refresh))
+
+
+@app.get("/api/events/calendar")
+def api_events_calendar(refresh: int = 0):
+    """Board meetings announced to NSE (results, dividends, fund raising), by date."""
+    from . import feeds
+    return feeds.calendar(refresh=bool(refresh))
+
+
+@app.get("/api/company/{sym}/analysts")
+def api_company_analysts(sym: str, refresh: int = 0):
+    from . import feeds
+    return feeds.analysts(sym.upper(), refresh=bool(refresh))
+
+
+@app.get("/api/company/{sym}/news")
+def api_company_news(sym: str, refresh: int = 0):
+    from . import feeds
+    return feeds.news(sym.upper(), refresh=bool(refresh))
+
+
+@app.get("/api/company/{sym}/actions")
+def api_company_actions(sym: str, refresh: int = 0):
+    from . import feeds
+    return feeds.actions(sym.upper(), refresh=bool(refresh))
+
+
 @app.get("/funds")
 def funds_page():
     return FileResponse(ROOT / "funds.html")

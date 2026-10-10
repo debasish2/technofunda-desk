@@ -558,6 +558,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
     <a class="rb" href="/breadth" title="Market breadth"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V9M8 16V4M13 16v-5M17.5 16H2.5"/></svg><span class="lb">Breadth</span></a>
   <a class="rb" href="/industries" title="Industries"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z"/></svg><span class="lb">Industries</span></a>
   <a class="rb" href="/funds" title="Mutual funds"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 3v7h7"/></svg><span class="lb">Funds</span></a>
+  <a class="rb" href="/events" title="IPOs and results calendar"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="14" height="12.5" rx="2"/><path d="M3 8.5h14M7 3v3M13 3v3"/></svg><span class="lb">Events</span></a>
     <span class="grow"></span>
     <span class="chip demo" title="Prices and results are generated. Load your own data with window.SETUP_DESK_DATA.">Sample</span>
     <a class="rb" id="profileLink" href="/profile" style="display:none" title="Your profile"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"/><path d="M3.8 16.5c.8-3 3.2-4.5 6.2-4.5s5.4 1.5 6.2 4.5"/></svg><span class="lb">Profile</span></a>
@@ -2350,7 +2351,50 @@ function fillIA(id,sym,stat,sub){
   loadIA(sym,stat).then(j=>{const el=document.getElementById(id);if(!el||!cur||cur.sym!==sym||fsub!==sub)return;
     if(j){el.innerHTML=iaTable(j,stat);const sc=el.querySelector('.ftbl');if(sc)sc.scrollLeft=sc.scrollWidth}});
 }
-const FSUBS=[['about','About'],['quarters','Quarters'],['pl','Profit & Loss'],['yrs','10 Years'],['bs','Balance Sheet'],['cf','Cash Flow'],['ratios','Ratios'],['hold','Shareholding'],['docs','Documents']];
+/* ---------- free feeds: analyst views (Yahoo), news (Google News), corporate actions and board meetings (NSE) ---------- */
+const FEED={};
+function loadFeed(sym,kind){
+  const k=sym+'|'+kind;if(FEED[k]&&FEED[k].data)return Promise.resolve(FEED[k].data);if(FEED[k]&&FEED[k].p)return FEED[k].p;
+  const p=fetch('/api/company/'+encodeURIComponent(sym)+'/'+kind).then(r=>r.ok?r.json():{ok:false,why:'This could not be loaded ('+r.status+').'}).then(j=>{if(j.ok)FEED[k]={data:j};else delete FEED[k];return j}).catch(()=>{delete FEED[k];return {ok:false,why:'This could not be loaded. Try again in a moment.'}});
+  FEED[k]={p};return p;
+}
+function fillFeed(sub,kind,render){
+  const box=$('#fbody'),sym=cur.sym;box.innerHTML='<div class="card"><p class="mut">Loading…</p></div>';
+  loadFeed(sym,kind).then(j=>{if(!cur||cur.sym!==sym||fsub!==sub)return;box.innerHTML=j.ok?render(j):`<div class="card"><p class="mut">${esc(j.why||'Nothing found.')}</p></div>`});
+}
+const fmtDay=iso=>iso?new Date(String(iso).slice(0,10)+'T00:00:00Z').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'}):'–';
+const rel=iso=>{if(!iso)return '';const m=Math.round((Date.now()-new Date(iso).getTime())/6e4);return m<60?Math.max(m,1)+' min ago':m<1440?Math.round(m/60)+' h ago':m<43200?Math.round(m/1440)+' days ago':fmtDay(iso)};
+function annAn(j){
+  const T=j.targets,cp=T.current,up=v=>cp&&v?(v/cp-1)*100:null,lo=T.low,hi=T.high,pos=v=>lo&&hi&&hi>lo&&v!=null?Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100)):null;
+  const cards=[['Current price',cp,null],['Mean target',T.mean,up(T.mean)],['Median target',T.median,up(T.median)],['Lowest target',T.low,up(T.low)],['Highest target',T.high,up(T.high)]]
+    .filter(c=>c[1]!=null).map(([l,v,u])=>`<div><span>${l}</span><b>₹ ${nf2.format(v)}</b>${u==null?'':`<span class="${u>=0?'up':'down'}">${u>=0?'+':''}${nf1.format(u)}% vs now</span>`}</div>`).join('');
+  const rng=lo&&hi?`<div class="note" style="margin:10px 0 2px">Range of analyst targets: ₹ ${nf2.format(lo)} to ₹ ${nf2.format(hi)}</div><div class="hl" style="position:relative;height:8px;border-radius:4px;background:var(--soft);margin:8px 0 4px"><i title="Mean target" style="position:absolute;top:-3px;width:3px;height:14px;background:var(--up);border-radius:2px;left:calc(${(pos(T.mean)||0).toFixed(1)}% - 1px)"></i>${pos(cp)==null?'':`<i title="Current price" style="position:absolute;top:-3px;width:3px;height:14px;background:var(--accent);border-radius:2px;left:calc(${pos(cp).toFixed(1)}% - 1px)"></i>`}</div><div class="note">Blue marker: current price · green marker: mean target</div>`:'';
+  const R=j.recs&&j.recs[0],tot=R?R.strongBuy+R.buy+R.hold+R.sell+R.strongSell:0;
+  const seg=(n,c,l)=>n?`<div title="${l}: ${n}" style="flex:${n};background:${c}"></div>`:'';
+  const recs=R?`<div class="card"><h4>Analyst recommendations <small class="mut">${tot} analysts this month</small></h4><div style="display:flex;height:14px;border-radius:7px;overflow:hidden;margin:6px 0 8px">${seg(R.strongBuy,'#0b7a4d','Strong buy')}${seg(R.buy,'var(--up)','Buy')}${seg(R.hold,'#9aa3b2','Hold')}${seg(R.sell,'#e58a91','Sell')}${seg(R.strongSell,'var(--down)','Strong sell')}</div>
+    <div class="kvg"><div><span>Strong buy</span><b>${R.strongBuy}</b></div><div><span>Buy</span><b>${R.buy}</b></div><div><span>Hold</span><b>${R.hold}</b></div><div><span>Sell</span><b>${R.sell}</b></div><div><span>Strong sell</span><b>${R.strongSell}</b></div></div></div>`
+    +fTable(['This month','1 month ago','2 months ago','3 months ago'].slice(0,j.recs.length),[['Strong buy',j.recs.map(r=>r.strongBuy),{d:0}],['Buy',j.recs.map(r=>r.buy),{d:0}],['Hold',j.recs.map(r=>r.hold),{d:0}],['Sell',j.recs.map(r=>r.sell),{d:0}],['Strong sell',j.recs.map(r=>r.strongSell),{d:0}]]):'';
+  const est=(arr,title,unit,d)=>arr.length?`<h4 class="ftitle">${title} <small>${unit}</small></h4>`+fTable(arr.map(x=>x.period),[['Average estimate',arr.map(x=>x.avg),{bold:1,d}],['Lowest',arr.map(x=>x.low),{d}],['Highest',arr.map(x=>x.high),{d}],['A year ago',arr.map(x=>x.yearAgoEps!=null?x.yearAgoEps:x.yearAgoRevenue),{d}],['Expected growth',arr.map(x=>x.growth==null?null:x.growth*100),{pct:1,pctCls:1,sub:1}],['Analysts',arr.map(x=>x.numberOfAnalysts),{d:0,sub:1}]]):'';
+  const gr=j.growth&&j.growth.length?`<h4 class="ftitle">Expected growth against the market index <small>consensus earnings growth</small></h4>`+fTable(j.growth.map(x=>x.period),[['This stock',j.growth.map(x=>x.stock==null?null:x.stock*100),{pct:1,pctCls:1}],['Index',j.growth.map(x=>x.index==null?null:x.index*100),{pct:1,pctCls:1}]]):'';
+  return `<div class="card"><h4>Analyst price targets</h4><div class="kvg">${cards}</div>${rng}</div>${recs}${est(j.eps,'Earnings per share estimates','₹ per share',2)}${est(j.revenue,'Revenue estimates','₹ crore',0)}${gr}
+    <p class="note" style="margin:6px 2px 14px">Source: Yahoo Finance's consensus of the analysts that cover the stock, updated ${esc((j.asof||'').replace('T',' '))}. These are opinions, not advice, and may lag company news.</p>`;
+}
+function annNews(j){
+  if(!j.items.length)return '<div class="card"><p class="mut">No recent news found for this company.</p></div>';
+  return `<div class="card"><h4>Recent news <small class="mut">search for "${esc(j.query)}"</small></h4>${j.items.map(x=>`<a class="doc" href="${esc(x.url)}" target="_blank" rel="noopener"><span>${esc(x.title)}<small class="mut" style="display:block;margin-top:2px">${esc(x.source||'')}</small></span><i>${esc(rel(x.dt))}</i></a>`).join('')}</div>
+    <p class="note" style="margin:6px 2px 14px">Headlines from Google News, newest first; each link opens the publisher's article. Matches are by company name, so an occasional headline may be about a similarly named company.</p>`;
+}
+function annAct(j){
+  const today=new Date().toISOString().slice(0,10),parse=s=>{const m=String(s||'').match(/(\d{2})-([A-Za-z]{3})-(\d{4})/);return m?new Date(m[1]+' '+m[2]+' '+m[3]+' UTC').toISOString().slice(0,10):null};
+  const nse=(j.nse||[]).map(x=>({...x,exIso:parse(x.ex)}));
+  const tbl=(head,rows)=>`<div class="card scroll ftbl"><table><thead><tr>${head.map((h,i)=>`<th class="${i?'':'lab'}" style="text-align:${i?'right':'left'}">${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  const na=nse.length?`<h4 class="ftitle">Dividends, splits, bonus and rights <small>from NSE · ex-date and record date</small></h4>`+tbl(['Action','Ex-date','Record date'],nse.map(x=>`<tr><td class="lab" style="white-space:normal;min-width:220px">${esc(x.subject||'')}${x.exIso&&x.exIso>=today?' <span class="tag up" style="font-size:10px;font-weight:700;letter-spacing:.04em;padding:1px 6px;border-radius:4px;color:var(--up);border:1px solid var(--up)">UPCOMING</span>':''}</td><td>${esc(x.ex||'–')}</td><td>${esc(x.record||'–')}</td></tr>`)):'';
+  const ev=(j.events||[]).length?`<h4 class="ftitle">Board meetings <small>announced to NSE</small></h4>`+tbl(['Purpose','Date'],j.events.map(x=>`<tr><td class="lab" style="white-space:normal;min-width:260px">${esc(x.purpose||'')}<small class="mut" style="display:block">${esc((x.detail||'').slice(0,200))}</small></td><td>${esc(fmtDay(x.date))}${x.date>=today?' <span style="color:var(--up);font-weight:600">upcoming</span>':''}</td></tr>`)):'';
+  const dv=(j.dividends||[]).length?`<h4 class="ftitle">Dividend history <small>₹ per share · Yahoo Finance</small></h4>`+tbl(['Ex-date','Dividend'],j.dividends.slice(0,15).map(x=>`<tr><td class="lab">${esc(fmtDay(x.d))}</td><td>₹ ${nf2.format(x.amount)}</td></tr>`)):'';
+  const sp=(j.splits||[]).length?`<h4 class="ftitle">Splits and bonus issues <small>Yahoo Finance</small></h4>`+tbl(['Date','Ratio'],j.splits.map(x=>`<tr><td class="lab">${esc(fmtDay(x.d))}</td><td>${x.ratio>=1?nf1.format(x.ratio)+' for 1':'1 for '+nf1.format(1/x.ratio)}</td></tr>`)):'';
+  return na+ev+dv+sp+`<p class="note" style="margin:6px 2px 14px">Corporate actions and board meetings are from NSE; dividend and split history from Yahoo Finance. Updated ${esc((j.asof||'').replace('T',' '))}.</p>`;
+}
+const FSUBS=[['about','About'],['quarters','Quarters'],['pl','Profit & Loss'],['yrs','10 Years'],['bs','Balance Sheet'],['cf','Cash Flow'],['ratios','Ratios'],['hold','Shareholding'],['analysts','Analysts'],['news','News'],['actions','Actions'],['docs','Documents']];
 const CO={};                                                       // symbol -> {data} | {p}
 function loadCompany(sym){
   if(CO[sym]&&CO[sym].data)return Promise.resolve(CO[sym].data);
@@ -2480,6 +2524,9 @@ function fillFund(d){
     const m=$('#amore');if(m)m.onclick=()=>{const t=$('#atext');const c=t.classList.toggle('clamp');m.textContent=c?'Read more':'Show less'};
     return;
   }
+  if(fsub==='analysts'){fillFeed('analysts','analysts',annAn);return}
+  if(fsub==='news'){fillFeed('news','news',annNews);return}
+  if(fsub==='actions'){fillFeed('actions','actions',annAct);return}
   if((fsub==='quarters'||fsub==='pl')&&fbasis==='sa'){fillStandalone(d);return}
   if(fsub==='quarters'){
     const Q=d.quarters||[];
