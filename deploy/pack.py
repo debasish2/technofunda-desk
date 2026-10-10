@@ -3,9 +3,11 @@
 
     .venv\\Scripts\\python deploy\\pack.py              # both:  deploy/out/app.tar.gz  and  deploy/out/data.tar.gz
     .venv\\Scripts\\python deploy\\pack.py --app        # only the code (for updates)
+    .venv\\Scripts\\python deploy\\pack.py --data       # only the data (moving to a new Mac or server)
+    (on a Mac or Linux:  .venv/bin/python deploy/pack.py --data)
 
 app.tar.gz   the code as last COMMITTED to git (so commit first: it is the same thing the GitHub backup holds), without data/
-data.tar.gz  consistent copies of the three databases (made with SQLite's backup call, so it is safe while the server runs), your themes,
+data.tar.gz  consistent copies of the databases (the IndianAPI statements, ia.db, and the mutual-fund data, funds.db, included) (made with SQLite's backup call, so it is safe while the server runs), your themes,
              the logins (users.json, secret.key) and every person's saved settings (userprefs/). Logs, caches and old backups are left out.
 """
 import os
@@ -20,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "deploy" / "out"
 DATA = ROOT / "data"
-DBS = ["setupdesk.db", "market.db", "history.db"]
+DBS = ["setupdesk.db", "market.db", "history.db", "ia.db", "funds.db"]
 FILES = ["themes.json", "users.json", "secret.key", "nifty100.txt"]
 
 
@@ -63,7 +65,8 @@ def pack_data():
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
-    pack_app()
+    if "--data" not in sys.argv:
+        pack_app()
     if "--app" not in sys.argv:
         pack_data()
     print(f"\nFiles are in {OUT}")

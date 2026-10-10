@@ -16,6 +16,28 @@ start-desk.bat
 `start-desk.bat` starts the server on port 8000 and opens the site. To reach it from a phone, see `scripts/allow_local_network.ps1`
 (one firewall rule) and the Tailscale notes below.
 
+## On a Mac (Apple silicon or Intel)
+
+Nothing in the app itself is Windows-specific (Python, SQLite and a browser page); only the start and scheduling scripts were. The Mac versions:
+
+1. **Python 3.11 or newer**: `brew install python@3.13`, or the installer from python.org. Then get the code: `git clone` your private GitHub repository.
+2. **Set up**: `bash scripts/setup_mac.sh` (creates `.venv` and installs the packages; add `--full` for the OCR tools of the accuracy programme).
+3. **Bring the data across** (the `data/` folder is not on GitHub). On the Windows PC: `.venv\Scripts\python deploy\pack.py --data` makes `deploy\out\data.tar.gz` (about 160 MB:
+   all databases including the IndianAPI statements, logins and saved settings). Copy it to the Mac (AirDrop, USB stick or a cloud drive), then in the project folder:
+   `mkdir -p data && tar -xzf ~/Downloads/data.tar.gz -C data`. Copy the `.env` file (your IndianAPI key) the same private way; it is not in the archive on purpose.
+   Skipping this step also works: `.venv/bin/python -m backend.nightly --weekly` rebuilds the free data (the IndianAPI statements would need a fresh download).
+4. **Start**: `./start-desk.command` (or double-click it; the first time, right-click > Open to get past Gatekeeper). It starts the server on port 8000 and opens the site.
+5. **Schedule the daily jobs and start the server at login**: `.venv/bin/python scripts/mac_services.py install` (launchd; `status` and `remove` also exist; `--keep-awake` stops idle sleep).
+
+Things that behave differently on a Mac:
+
+* **Sleep.** A sleeping Mac serves nothing. launchd runs a job it missed while asleep as soon as the Mac wakes, but not one missed while switched off. For an always-available app,
+  use the Lightsail kit in `deploy/` or `--keep-awake` with the Mac on power (a closed lid still sleeps it unless an external display is attached).
+* **Time zone.** The jobs fire at the Mac's local time; set India time in System Settings > General > Date & Time (the app's own market-hours logic is always IST).
+* **Phone on the same Wi-Fi**: `http://<the Mac's address>:8000` (the start script prints it). macOS asks once whether Python may accept incoming connections: Allow. Tailscale works as on Windows.
+* **Run it on one machine at a time.** Both machines would fetch the same data, and the IndianAPI monthly call budget is shared.
+* **GitHub backup**: `bash scripts/backup_github.sh` (scheduled nightly by `mac_services.py install`).
+
 ## Data
 
 The `data/` folder (SQLite databases, logs, caches) is **not** in this repository: it is rebuilt from the free sources.

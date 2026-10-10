@@ -3,3 +3,4 @@
 *.service text eol=lf
 *.timer text eol=lf
 deploy/Caddyfile.example text eol=lf
+*.command text eol=lf
