@@ -6,6 +6,7 @@
     python -m backend.indianapi --fetch 20 --retry           # first re-ask the stocks that returned no data
     python -m backend.indianapi --fetch 2500 --all           # the audit pass: every company in the screener (one call each)
     python -m backend.indianapi --annual 2500                # yearly results of accepted stocks; fills missing annual profit
+    python -m backend.indianapi --banks --max-calls 300      # banks, lenders and insurers: all statements, verified by net profit
     python -m backend.indianapi --stats all --max-calls 1200   # EVERY statement of accepted stocks in one call each, biggest first, resumable (use this)
     python -m backend.indianapi --stats balancesheet,cashflow --max-calls 1000   # single statements (costs one call per statement: avoid)
     python -m backend.indianapi --audit-report               # data/ia_audit.csv: quarters where IndianAPI and our row differ
@@ -368,13 +369,15 @@ def apply_annual(sym, con=None):
     return True
 
 
+STAT_STATUSES = ("ok", "confirmed", "np_differs", "op_differs", "break", "stats_only")     # the company is the right one (the quarterly check may still have failed)
+WIDE_SQL = "status IN " + str(STAT_STATUSES)
 STATS = ("balancesheet", "cashflow", "ratios", "shareholding_pattern_quarterly", "shareholding_pattern_yearly", "profit_loss_stats")
 ALL_KEYS = ("quarter_results", "yoy_results") + STATS              # what stats=all returns, all of it in ONE call
 
 
 def fetch_all(con, sym):
     """One call with stats=all: every statement of an accepted stock (about 6 times cheaper than asking for each), each kept in ia_stat as sent."""
-    f = con.execute("SELECT query, name FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
+    f = con.execute("SELECT query, name FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed','np_differs','op_differs','break','stats_only')", (sym,)).fetchone()
     if not f:
         return "skipped", "not an accepted stock"
     query = f["query"] or _search_name(f["name"] or sym)
@@ -395,9 +398,46 @@ def fetch_all(con, sym):
     return ("ok", f"{n} statements") if n else ("no_data", "no statements in the reply")
 
 
+def fetch_all_unasked(con, sym):
+    """A stock IndianAPI was never asked about (banks, lenders, insurers): one `all` call by name (symbol as the fallback), accepted when its quarterly net profit agrees
+    with ours for most common quarters. Stores the statements only; our quarterly rows are untouched."""
+    row = con.execute("SELECT name FROM stock WHERE sym=?", (sym,)).fetchone()
+    name = row["name"] if row and row["name"] else sym
+    mine = {r["qend"]: r["np"] for r in con.execute("SELECT qend,np FROM quarter WHERE sym=? AND np IS NOT NULL", (sym,))}
+    for q in dict.fromkeys([_search_name(name), sym]):
+        if used(con) >= monthly_limit():
+            return "limit", "monthly call allowance used up"
+        code, body = _call(con, "/historical_stats", {"stock_name": q, "stats": "all"})
+        if code == 429:
+            return "limit", "HTTP 429"
+        if code == 200 and isinstance(body, dict) and isinstance(body.get("quarter_results"), dict):
+            break
+    else:
+        return "no_data", "not found by name or symbol"
+    qr = body["quarter_results"]
+    npr = qr.get("Net Profit") or {}
+    common = [(month_end(l), v) for l, v in npr.items() if v is not None and month_end(l) in mine]
+    good = [1 for qe, v in common if abs(v - mine[qe]) <= max(0.03 * abs(mine[qe]), 2.0)]
+    if len(common) < 2 or len(good) < max(2, round(0.7 * len(common))):
+        con.execute("INSERT OR REPLACE INTO ia_fetch(sym,name,fetched,status,detail,query) VALUES(?,?,?,?,?,?)",
+                    (sym, name, datetime.now().isoformat(timespec="seconds"), "unconfirmed", f"net profit agrees in {len(good)} of {len(common)} common quarters", q))
+        con.commit()
+        return "unconfirmed", f"net profit agrees in {len(good)} of {len(common)} common quarters"
+    now = datetime.now().isoformat(timespec="seconds")
+    con.execute("INSERT OR REPLACE INTO ia_fetch(sym,name,fetched,status,detail,np_scale,basis,query) VALUES(?,?,?,?,?,?,?,?)",
+                (sym, name, now, "stats_only", f"statements only; net profit agrees in {len(good)} of {len(common)} quarters", 1.0, None, q))
+    n = 0
+    for k, v in body.items():
+        if k in STATS and isinstance(v, dict) and v:
+            con.execute("INSERT OR REPLACE INTO ia_stat VALUES(?,?,?,?)", (sym, k, now, json.dumps(v, separators=(",", ":"))))
+            n += 1
+    con.commit()
+    return "ok", f"{n} statements, net profit agrees in {len(good)} of {len(common)} quarters"
+
+
 def fetch_stat(con, sym, stat):
     """One call: one statement of an accepted stock, kept as IndianAPI sent it (rows by label, columns by period) in ia_stat."""
-    f = con.execute("SELECT query, name FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed')", (sym,)).fetchone()
+    f = con.execute("SELECT query, name FROM ia_fetch WHERE sym=? AND status IN ('ok','confirmed','np_differs','op_differs','break','stats_only')", (sym,)).fetchone()
     if not f:
         return "skipped", "not an accepted stock"
     query = f["query"] or _search_name(f["name"] or sym)
@@ -502,6 +542,28 @@ def main(argv):
                 break
         print(f"np_annual filled for {filled} stocks; calls used this month: {used(con)} of {monthly_limit()}")
         return
+    elif "--banks" in argv:                                     # python -m backend.indianapi --banks --max-calls 300: banks, lenders and insurers (never asked before)
+        cap = int(argv[argv.index("--max-calls") + 1]) if "--max-calls" in argv else 0
+        if not cap:
+            print("give --max-calls N")
+            return
+        asked = {r[0] for r in con.execute("SELECT sym FROM ia_fetch")}
+        todo = [r[0] for r in con.execute("SELECT sym FROM stock WHERE kind='fin' ORDER BY sym") if r[0] not in asked]
+        print(f"{len(todo)} banks, lenders and insurers to ask about; this run stops after {cap} calls", flush=True)
+        start, n_ok = used(con), 0
+        for i, sym in enumerate(todo):
+            if used(con) - start >= cap:
+                break
+            if i % 50 == 0 and not healthy(con):
+                print("IndianAPI's company search is not answering: stopping.", flush=True)
+                break
+            status, detail = fetch_all_unasked(con, sym)
+            n_ok += status == "ok"
+            print(f"{sym:<12} {status:<11} {detail}", flush=True)
+            if status == "limit":
+                break
+        print(f"stored {n_ok}; calls used this month (my count): {used(con)}")
+        return
     elif "--stats" in argv:                                     # python -m backend.indianapi --stats balancesheet,cashflow --max-calls 1000
         want_all = argv[argv.index("--stats") + 1] == "all"
         wanted = ["cashflow"] if want_all else [x for x in argv[argv.index("--stats") + 1].split(",") if x in STATS]
@@ -510,7 +572,7 @@ def main(argv):
             print("give --stats all (every statement in one call per stock) or any of", ", ".join(STATS), "and --max-calls N (the most calls this run may make)")
             return
         cap_cr = {k: v for k, v in market.connect().execute("SELECT sym, mcap FROM class")}
-        accepted = sorted((r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE status IN ('ok','confirmed')")), key=lambda s: -(cap_cr.get(s) or 0))
+        accepted = sorted((r[0] for r in con.execute("SELECT sym FROM ia_fetch WHERE " + WIDE_SQL)), key=lambda s: -(cap_cr.get(s) or 0))
         done = {(r[0], r[1]) for r in con.execute("SELECT sym, stat FROM ia_stat")}
         todo = [(s, st) for st in wanted for s in accepted if (s, st) not in done]
         start, n_ok, i = used(con), 0, 0
