@@ -332,7 +332,7 @@ let IA=null,IAP=null,DUE=null;
 const QF={ind:new Set(),board:new Set(),cap:new Set(),index:null,due:null,watch:null};
 const colKeys=()=>(tabCols[tab]||TABS.find(t=>t[0]===tab)[2]).filter(k=>R[k]);
 const watchList=()=>{try{return JSON.parse(localStorage.getItem('setupdesk.v1')||'{}').watch||[]}catch(e){return []}};
-IAP=fetch('/api/screener/cols').then(r=>r.ok?r.json():null).then(j=>{IA=j}).catch(()=>{});
+IAP=fetch('/api/screener/cols').then(r=>r.ok?r.json():null).then(j=>{IA=j&&j.cols&&j.data?j:null}).catch(()=>{});
 function mergeIA(){
   if(!IA)return;
   for(const r of rows){const a=IA.data[r.sym];if(!a)continue;IA.cols.forEach((c,i)=>{if(r[c]==null&&a[i]!=null)r[c]=a[i]})}
@@ -412,7 +412,7 @@ const QDEF=[
  {id:'board',label:'Exchange',multi:true,opts:()=>BOARDS.map(v=>[v,v])},
  {id:'cap',label:'Type',multi:true,opts:()=>CAPS.map(v=>[v,v])},
  {id:'watch',label:'Watchlist',multi:false,opts:()=>[['in','In my watchlist'],['out','Not in my watchlist']]}];
-fetch('/api/screener/indexes').then(r=>r.json()).then(j=>{INDEXES=j;renderQ()}).catch(()=>{});
+fetch('/api/screener/indexes').then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j)){INDEXES=j;renderQ()}}).catch(()=>{});
 function qState(id){const v=QF[id];return v instanceof Set?[...v]:v==null?[]:id==='index'?[v.name]:[String(v)]}
 function renderQ(){
   const keep=qOpen&&document.querySelector('#qbar .qpop:not([hidden]) input[type=search]');const hadFocus=keep&&document.activeElement===keep;
