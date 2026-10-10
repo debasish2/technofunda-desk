@@ -200,7 +200,15 @@ const PRESETS=[
  {name:'Fresh breakouts from a base',set:{consol_breakout:true,stage:'2',rs:[70,99]}},
  {name:'Accelerating earnings + RS leaders',set:{earn_momentum:'Accelerating',opm_expanding:true,rs:[80,99],rs_high:true}},
  {name:'Super growth scan',set:{min_mcap:500,profit_yoy:20,sales_yoy:15,profit_cagr3:15,roce:15,de:1,price_ma:'above_sma50',ma_order:'sma50_200',near_high:15,vs500_252:0,rsi14:55}},
- {name:'Techno Funda',set:{min_mcap:1000,profit_yoy:20,profit_cagr_fy:15,near_high:15,vs500_252:3,pe:50}}];
+ {name:'Techno Funda',set:{min_mcap:1000,profit_yoy:20,profit_cagr_fy:15,near_high:15,vs500_252:3,pe:50}},
+ /* the swing playbook: earnings scans by size, the strict RS scan, the IPO scan and an entry-setup scan */
+ {name:'Earnings scan: profit +25%, Rs 1,000-10,000 Cr',set:{profit_yoy:25,min_mcap:1000,max_mcap:10000}},
+ {name:'EPS scan, small: Rs 500-10,000 Cr',set:{profit_yoy:25,eps_rating:80,min_price:20,min_mcap:500,max_mcap:10000}},
+ {name:'EPS scan, medium: Rs 10,000-20,000 Cr',set:{profit_yoy:25,eps_rating:80,min_price:20,min_mcap:10000,max_mcap:20000}},
+ {name:'EPS scan, large: Rs 20,000 Cr and above',set:{profit_yoy:25,eps_rating:80,min_price:20,min_mcap:20000}},
+ {name:'RS scan: RS 80+, within 20% of the high',set:{rs:[80,99],near_high:20,min_price:20,price_ma:'above_sma200',value30:5,min_mcap:500}},
+ {name:'IPO scan: listed within a year',set:{listed_days:365,min_mcap:500,min_price:20}},
+ {name:'Swing entry: near highs, tight, volume spike',set:{near_high:10,pullback20:8,rvol5:1.5,price_ma:'above_sma200',min_price:20,min_mcap:500}}];
 function applyPreset(set){
   $('#clear').click();
   for(const [id,v] of Object.entries(set)){
@@ -220,21 +228,22 @@ const C={sym:['sym','# &nbsp;Symbol'],name:['name','Name'],last:['last','Price',
  consol_bars:['consol_bars','Base',v=>v?nf0.format(v)+' bars':'–'],consol_range:['consol_range','Box range',v=>nf1.format(v)+'%'],consol_breakout:['consol_breakout','Breakout',v=>v?'<span class="tag up">Yes</span>':'–'],
  vcp_status:['vcp_status','VCP',v=>v?`<span class="tag ${v==='breakout'?'up':''}">${esc(v)}</span>`:'–'],vcp_n:['vcp_n','Pullbacks',v=>nf0.format(v)],vcp_last:['vcp_last','Last pullback',v=>nf1.format(v)+'%'],
  industry:['industry','Industry',v=>v?esc(v):'–'],sector:['sector','Sector',v=>v?esc(v):'–'],ind_3m:['ind_3m','Ind. 3M',v=>(v>=0?'+':'')+nf1.format(v)+'%'],ind_rank_3m:['ind_rank_3m','Ind. rank',v=>'#'+nf0.format(v)],
+ pullback20:['pullback20','Pullback 20d',v=>nf1.format(v)+'%'],rvol5:['rvol5','Vol spike',v=>nf1.format(v)+'x'],listed_days:['listed_days','Listed',v=>v==null?'–':nf0.format(v)+' d ago'],value30_cr:['value30_cr','30d traded ₹Cr',v=>nf1.format(v)],
  high52_pct:['high52_pct','From 52w high',v=>nf1.format(v)+'%'],mcap:['mcap','Mkt cap ₹Cr',v=>nf0.format(v)],rsi14:['rsi14','RSI 14',v=>nf0.format(v)],
  vs500_252:['vs500_252','vs N500 12m',v=>(v>=0?'+':'')+nf1.format(v)+'%'],value_cr:['value_cr','Traded ₹Cr',v=>nf0.format(v)]};
 const COLGROUPS={trend:['Trend & strength',['template','supertrend','sar','mansfield','vs500_55','vs500_252','rsi14','momentum','high52_pct','mcap']],
  patterns:['Base & VCP patterns',['consol_bars','consol_range','consol_breakout','vcp_status','vcp_n','vcp_last']],
- industry:['Industry detail',['sector','ind_3m']],fund:['Quarterly results',null]};
-let colOn={trend:false,patterns:false,industry:false,fund:true};
+ industry:['Industry detail',['sector','ind_3m']],swing:['Swing setup',['pullback20','rvol5','value30_cr','listed_days']],fund:['Quarterly results',null]};
+let colOn={trend:false,patterns:false,industry:false,swing:false,fund:true};
 try{Object.assign(colOn,JSON.parse(localStorage.getItem('setupdesk.scrcols')||'{}'))}catch(e){}
-const FCOLS=[['grade','Result',v=>`<span class="tag ${GRADE[v]||''}">${esc(v)}</span>`],['sales_yoy','Sales YoY',v=>nf1.format(v)+'%'],
+const FCOLS=[['eps_rating','EPS rating',v=>nf0.format(v)],['grade','Result',v=>`<span class="tag ${GRADE[v]||''}">${esc(v)}</span>`],['sales_yoy','Sales YoY',v=>nf1.format(v)+'%'],
  ['profit_yoy','Profit YoY',v=>nf1.format(v)+'%'],['opm_ttm','OPM 12m',v=>nf1.format(v)+'%'],['pe','PE',v=>nf1.format(v)+'x'],['pb','P/B',v=>nf1.format(v)+'x'],['gnpa_pct','GNPA',v=>nf2.format(v)+'%'],['pledge_pct','Pledge',v=>nf1.format(v)+'%'],['insider_net','Insider ₹Cr',v=>(v>=0?'+':'')+nf2.format(v)],['roce','ROCE',v=>nf1.format(v)+'%'],['de','D/E',v=>nf2.format(v)+'x'],['profit_cagr3','Profit 3y CAGR',v=>nf1.format(v)+'%'],['profit_cagr_fy','Profit 3 FY CAGR',v=>nf1.format(v)+'%']];
 let fundUsed=false;
 function buildCols(){
   const c=[C.sym,C.name,C.last,C.chg];
   if(fundUsed&&colOn.fund)c.push(...FCOLS);
   c.push(C.rs,C.stage,C.industry,C.ind_rank_3m);
-  for(const g of ['trend','patterns','industry'])if(colOn[g])c.push(...COLGROUPS[g][1].map(k=>C[k]));
+  for(const g of ['trend','patterns','industry','swing'])if(colOn[g])c.push(...COLGROUPS[g][1].map(k=>C[k]));
   c.push(C.value_cr);return c;
 }
 let cols=buildCols();

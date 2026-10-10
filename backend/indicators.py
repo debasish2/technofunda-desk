@@ -192,7 +192,7 @@ def snapshot(data=None):
     """One row per stock for the newest session, plus the RS history needed by leader filters."""
     wide, idx, names = data or load()
     C, H, L, V = wide["c"], wide["h"], wide["l"], wide["v"]
-    e20, e50, e200 = ema(C, 20), ema(C, 50), ema(C, 200)
+    e20, e21, e50, e200 = ema(C, 20), ema(C, 21), ema(C, 50), ema(C, 200)
     s50, s150, s200 = sma(C, 50), sma(C, 150), sma(C, 200)
     ret = {k: C / C.shift(k) - 1 for k in (21, 63, 126, 189, 252)}
     rs_raw = 0.4 * ret[63] + 0.2 * ret[126] + 0.2 * ret[189] + 0.2 * ret[252]
@@ -240,7 +240,23 @@ def snapshot(data=None):
         r = vcp_scan(h, l, c, np.nan_to_num(v))
         if r:
             vc[sym] = r
+    # swing-strategy columns: liquidity over 30 sessions, listing age, pullback depth, volume spikes
+    first_i = C.notna().values.argmax(axis=0)                                   # first session with a price; a stock whose history starts later than the loaded window is a recent listing
+    first_d = pd.to_datetime(pd.Series(C.index[first_i], index=C.columns))
+    listed = (pd.to_datetime(C.index[t]) - first_d).dt.days.where(pd.Series(first_i, index=C.columns) > 5)
+    try:                                                                         # NSE's own listing dates: a short price history is not a listing (many stocks have one)
+        from . import feeds
+        ld = feeds.listing_dates()
+        asof_d = pd.to_datetime(C.index[t])
+        listed = pd.Series({k: (asof_d - pd.Timestamp(v)).days for k, v in ld.items() if k in C.columns}, dtype=float).reindex(C.columns)
+    except Exception:
+        extra = {r[0] for r in market.connect().execute("SELECT sym FROM universe WHERE series IN ('SM','ST','IV','RR')")}
+        listed = listed.where(~listed.index.isin(extra))
+    h20, l20 = H.rolling(20, min_periods=10).max().iloc[t], L.rolling(20, min_periods=10).min().iloc[t]
+    rv = V / V.shift(1).rolling(50, min_periods=20).mean()                      # volume against the average of the 50 sessions before it
     snap = pd.DataFrame({
+        "value30_cr": (C * V).rolling(30, min_periods=15).mean().iloc[t] / 1e7, "ema21": row(e21), "high20": h20, "low20": l20,
+        "pullback20": (1 - last / h20) * 100, "rvol": rv.iloc[t], "rvol5": rv.iloc[t - 4:t + 1].max(), "listed_days": listed,
         "name": pd.Series(names), "last": last, "chg": (C.iloc[t] / C.iloc[t - 1] - 1) * 100,
         "value_cr": (C * V).rolling(20, min_periods=10).mean().iloc[t] / 1e7,       # avg daily traded value
         "ema20": row(e20), "ema50": row(e50), "ema200": row(e200),
@@ -412,6 +428,18 @@ FIELDS = [
      "help": "Wilder's relative strength index on daily closes. 55 and above means the last two weeks of buying outweighed the selling."},
     {"group": "Size & price", "id": "min_mcap", "label": "Market cap >=", "type": "min", "unit": "Rs Cr",
      "help": "Market capitalisation from BSE's listing data, in rupee crore."},
+    {"group": "Size & price", "id": "max_mcap", "label": "Market cap <=", "type": "max", "unit": "Rs Cr",
+     "help": "Upper limit on market capitalisation, in rupee crore: with the lower limit above it makes a size basket (small 500-10,000, medium 10,000-20,000, large 20,000+)."},
+    {"group": "Size & price", "id": "min_price", "label": "Price >=", "type": "min", "unit": "Rs",
+     "help": "Latest close in rupees. 20 leaves out the lowest-priced stocks."},
+    {"group": "Size & price", "id": "value30", "label": "Average traded value, 30 sessions >=", "type": "min", "unit": "Rs Cr",
+     "help": "Average of close x volume over the last 30 sessions, in rupee crore: a liquidity floor so a position can be entered and exited."},
+    {"group": "Size & price", "id": "listed_days", "label": "Listed within the last", "type": "max", "unit": "days",
+     "help": "Days since the first price on file, for recent listings (IPOs). 365 keeps stocks listed in the last year. Older stocks have no value."},
+    {"group": "Price patterns", "id": "pullback20", "label": "Pullback from the 20-session high at most", "type": "max", "unit": "%",
+     "help": "How far the close is below the highest high of the last 20 sessions. 8 keeps tight pullbacks: stocks still close to a recent high."},
+    {"group": "Price patterns", "id": "rvol5", "label": "Volume spike in the last 5 sessions: at least", "type": "min", "unit": "x average",
+     "help": "The biggest volume of the last 5 sessions as a multiple of the average of the 50 sessions before it. 1.5 means 50% above normal."},
     {"group": "Size & price", "id": "near_high", "label": "Within this % of the 52-week high", "type": "max", "unit": "%",
      "help": "How far the close is below the highest high of the last 252 sessions, in percent. 15 keeps stocks no more than 15% under their high."},
     {"group": "Relative strength", "id": "mansfield", "label": "Mansfield RS >", "type": "min", "unit": "%",
@@ -474,6 +502,18 @@ def apply(snap, filters):
             m &= snap["rsi14"] >= float(v)
         elif fid == "min_mcap":
             m &= snap["mcap"] >= float(v)
+        elif fid == "max_mcap":
+            m &= snap["mcap"] <= float(v)
+        elif fid == "min_price":
+            m &= snap["last"] >= float(v)
+        elif fid == "value30":
+            m &= snap["value30_cr"] >= float(v)
+        elif fid == "listed_days":
+            m &= snap["listed_days"] <= float(v)
+        elif fid == "pullback20":
+            m &= snap["pullback20"] <= float(v)
+        elif fid == "rvol5":
+            m &= snap["rvol5"] >= float(v)
         elif fid == "near_high":
             m &= snap["high52_pct"] >= -float(v)
         elif fid == "consol_bars":

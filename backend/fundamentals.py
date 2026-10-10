@@ -52,6 +52,9 @@ def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity
         return None
     grades = [grade_of(q, y) for q, y in graded]
     LQ, YQ = graded[-1]
+    prevQ = [q for q in Q if q["end"] < LQ["end"]]                       # the quarter before the newest: growth in the last two quarters feeds the EPS rating
+    pq = prevQ[-1] if prevQ else None
+    profit_yoy_prev = (pq["np"] / ya(pq)["np"] - 1) * 100 if pq and ya(pq) and ya(pq)["np"] > 0 else None
     opy = lambda q: (q["op"] / ya(q)["op"] - 1) if q and ya(q) and ya(q)["op"] > 0 else None
     y3 = [opy(by.get(month_end(LQ["end"], 6))), opy(by.get(month_end(LQ["end"], 3))), opy(LQ)]
     if any(v is None for v in y3):
@@ -123,7 +126,7 @@ def analyse(quarters, last_price, last_bar_date, shares_cr, cap_employed, equity
         "pb": (mcap / equity) if (mcap and equity and equity > 0) else None, "is_fin": fin,
         "roe": (ttm_np / equity * 100) if equity and equity > 0 and not oneoff else None,
         "oneoff": oneoff,
-        "profit_cagr3": cagr3, "profit_cagr_fy": cagr_fy,
+        "profit_cagr3": cagr3, "profit_cagr_fy": cagr_fy, "profit_yoy_prev": profit_yoy_prev,
         "de": None if fin or debt is None or not equity or equity <= 0 else debt / equity,
         "profitable": ttm_np > 0,
     }
@@ -163,6 +166,16 @@ def snapshot(con=None):
         if r is None or r[col] is None or sym not in df.index:
             return None
         return r[col] if (date.fromisoformat(df.loc[sym, "price_date"]) - date.fromisoformat(r["qend"])).days <= 200 else None
+
+    # EPS rating (our estimate, 1-99): how a stock's earnings growth ranks against every other stock. 40% newest quarter's profit growth, 30% the quarter before,
+    # 30% the 3-year growth; growth is capped so a tiny base cannot dominate, a loss turning into a profit counts as the cap and two losses as the floor.
+    gl = df["profit_yoy"].astype(float).clip(-100, 300)
+    gl = gl.where(df["profit_state"] != "loss_to_profit", 300.0).where(df["profit_state"] != "loss_both", -100.0)
+    gp = df["profit_yoy_prev"].astype(float).clip(-100, 300).fillna(gl)
+    g3 = df["profit_cagr3"].astype(float).clip(-50, 100).fillna(gl.clip(-50, 100))
+    rk = lambda x: x.rank(pct=True)
+    comp = 0.4 * rk(gl) + 0.3 * rk(gp) + 0.3 * rk(g3)
+    df["eps_rating"] = (comp.rank(pct=True) * 98 + 1).where(gl.notna()).round(0)
 
     nq = quality.newest(con)
     df["checked"] = [nq[s][1] if s in nq and nq[s][0] == df.loc[s, "latest_q"] else None for s in df.index]     # f / m / u for the newest quarter
@@ -213,6 +226,9 @@ FIELDS = [
     {"group": "Fundamentals", "id": "profitable", "label": "Profitable over the last 12 months", "type": "flag", "fundamental": True},
     {"group": "Fundamentals", "id": "pe", "label": "PE <", "type": "max", "unit": "x", "fundamental": True,
      "help": "Market cap over the last 12 months' net profit. Loss-makers have no PE and never pass this filter."},
+    {"group": "Fundamentals", "id": "eps_rating", "label": "EPS rating >", "type": "min", "fundamental": True,
+     "help": "Our estimate of an IBD-style EPS rating, 1-99: how a stock's profit growth ranks against all others (40% newest quarter's growth, 30% the quarter before, 30% three-year growth). "
+             "It uses net profit, not per-share earnings, so a big share issue is not reflected."},
     {"group": "Fundamentals", "id": "profit_cagr3", "label": "Profit growth, 3-year CAGR >", "type": "min", "unit": "%", "fundamental": True,
      "help": "Net profit of the last four quarters against the four quarters that ended three years earlier, per year; where the quarters do not reach back that far (banks, recent listings), the latest financial year against the one three years earlier. Per-share growth (EPS) is the same unless the share count changed a lot."},
     {"group": "Fundamentals", "id": "profit_cagr_fy", "label": "Profit growth, last 3 financial years CAGR >", "type": "min", "unit": "%", "fundamental": True,

@@ -246,6 +246,11 @@ def ipos(refresh=False):
     return cached("ipos", "all", build, refresh)
 
 
+def listing_dates():
+    """{symbol: listing date} for the IPOs NSE lists as listed in the last 500 days (the screener's 'listed within a year' filter uses it)."""
+    return {r["symbol"]: r["listing"] for r in ipos().get("rows", []) if r.get("symbol") and r.get("listing") and r.get("status") == "Listed"}
+
+
 # ---------------------------------------------------------------- board-meeting calendar (NSE)
 def calendar(refresh=False):
     def build():

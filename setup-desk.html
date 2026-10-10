@@ -676,6 +676,7 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
         <button role="tab" data-t="peers" aria-selected="false">Peers</button>
         <button role="tab" data-t="ins" aria-selected="false">Insider</button>
         <button role="tab" data-t="scr" aria-selected="false">Screens</button>
+        <button role="tab" data-t="plan" aria-selected="false">Trade plan</button>
         <button role="tab" data-t="cred" aria-selected="false">Credibility</button>
       </div>
       <div id="panel"></div>
@@ -2721,6 +2722,71 @@ function tIns(s){
   return `<div class="card"><h4>Last 12 months · open market</h4><div class="kv"><span>Bought</span><span class="up">₹${nf2.format(buy)} Cr</span><span>Sold</span><span class="down">₹${nf2.format(sell)} Cr</span><span>Net</span><b class="${net>=0?'up':'down'}">${net>=0?'+':'−'}₹${nf2.format(Math.abs(net))} Cr</b></div><p class="note">${mk.length} open-market trade${mk.length===1?'':'s'}${other?` and ${other} other filing${other===1?'':'s'} (off-market, ESOP, gifts, pledges) that are listed below but not counted`:''}. Turn on “Insider” above the chart to see the trades as markers.</p></div>
   <div class="card scroll"><table class="instbl"><thead><tr><th>Date</th><th>Who</th><th>Role</th><th>Type</th><th>Shares</th><th>₹ Cr</th></tr></thead><tbody>${s.insider.map((t,i)=>`<tr${i>=INS_SHOW?' class="insmore"':''}><td>${t.d}</td><td>${esc(t.who)}<small class="rolein">${t.cat&&t.cat!=='-'?' · '+esc(t.cat):''}</small></td><td class="mut role">${esc(t.cat&&t.cat!=='-'?t.cat:'')}</td><td>${kind(t)}</td><td>${nf0.format(t.qty)}</td><td>${nf2.format(t.val)}</td></tr>`).join('')}</tbody></table>${s.insider.length>INS_SHOW?`<button class="linkbtn" id="insAll" style="margin:10px 4px 2px">Show all ${s.insider.length} filings</button>`:''}</div>`;
 }
+/* ---------- Trade plan: the swing playbook's checklist, and a position-size and exit planner ----------
+   Selection (earnings power), entry (breakouts and volume), exit (partial booking, trail with the 21 EMA), position sizing (never more than 1% of capital at risk). */
+const planPrefs=()=>{const p=prefs.plan||{};return {cap:+p.cap>0?+p.cap:1000000,risk:+p.risk>0?+p.risk:1,regime:p.regime||'auto'}};
+function tPlan(s){
+  const sym=s.sym;
+  fetch('/api/plan/'+encodeURIComponent(sym)).then(r=>r.ok?r.json():null).then(j=>{if(!cur||cur.sym!==sym||st.tab!=='plan')return;$('#panel').innerHTML=planHtml(j);if(j)wirePlan(j)}).catch(()=>{if(cur&&cur.sym===sym&&st.tab==='plan')$('#panel').innerHTML='<div class="card"><p class="mut">The playbook check could not be loaded. Try again in a moment.</p></div>'});
+  return '<div class="card"><p class="mut">Loading the playbook check…</p></div>';
+}
+function planHtml(j){
+  if(!j)return '<div class="card"><p class="mut">The playbook check is not available for this stock: it has no price data on file.</p></div>';
+  const P=planPrefs(),L=j.levels,mark=ok=>ok===true?'<span class="m ok">✓</span>':ok===false?'<span class="m no">✕</span>':'<span class="m" style="background:var(--muted)">–</span>';
+  const groups=['Selection','Relative strength','Entry'];
+  const total=j.checks.filter(c=>c.ok!==null).length,pass=j.checks.filter(c=>c.ok===true).length;
+  const cards=groups.map(g=>{const A=j.checks.filter(c=>c.group===g),n=A.filter(c=>c.ok===true).length,t=A.filter(c=>c.ok!==null).length;
+    return `<div class="card"><h4>${g} <small class="mut">${n} of ${t}</small></h4>${A.map(c=>`<div class="check">${mark(c.ok)}<span>${esc(c.label)}${c.note?`<small class="mut" style="display:block;margin-top:2px">${esc(c.note)}</small>`:''}</span><span class="mut" style="margin-left:auto;padding-left:10px;text-align:right">${esc(c.value??'–')}</span></div>`).join('')}</div>`}).join('');
+  const inp='style="width:100%;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:6px 9px;font:inherit"';
+  const stop0=L.low20&&L.last&&L.low20<L.last?L.low20:(L.last?L.last*.93:0);
+  return `<div class="card"><h4>Swing playbook check <small class="mut">${pass} of ${total} rules pass for ${esc(j.name||j.sym)}</small></h4>
+    <p class="note" style="margin:0">Earnings power first, then strength, then a tight entry on volume. ${esc(L.basket||'')}${L.asof?' · prices as of '+esc(L.asof):''}.</p></div>${cards}
+    <div class="card"><h4>Trade planner <small class="mut">position size, exits and the trailing stop</small></h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:8px 0">
+        <label><span class="mut" style="font-size:12px">Capital (₹)</span><input id="plCap" type="number" min="0" step="10000" value="${P.cap}" ${inp}></label>
+        <label><span class="mut" style="font-size:12px">Risk per trade (% of capital)</span><input id="plRisk" type="number" min="0.1" max="5" step="0.1" value="${P.risk}" ${inp}></label>
+        <label><span class="mut" style="font-size:12px">Entry price (₹)</span><input id="plEntry" type="number" min="0" step="0.05" value="${(L.last||0).toFixed(2)}" ${inp}></label>
+        <label><span class="mut" style="font-size:12px">Stop-loss (₹) <a href="#" id="plBase" style="font-size:11px">base low</a></span><input id="plStop" type="number" min="0" step="0.05" value="${stop0.toFixed(2)}" ${inp}></label>
+        <label><span class="mut" style="font-size:12px">Market</span><select id="plReg" ${inp}><option value="strong">Strong market</option><option value="weak">Weak market</option></select></label>
+      </div>
+      <div id="plOut"></div></div>
+    <details class="card"><summary style="cursor:pointer;font-weight:600">Playbook notes</summary>
+      <p class="note" style="margin-top:10px"><b>Four pillars.</b> Stock selection: earnings power is king. Entry: breakouts plus volume as confirmation. Exit: partial booking, then trail with moving averages. Position sizing: never risk more than 1% on any trade.</p>
+      <p class="note"><b>Selection.</b> Quarterly profit growth above 25%; fresh institutional buying and industry triggers; infant industries (renewables, pharma, defence, semiconductors); ignore news and broker noise and let charts and fundamentals speak. Earnings scan: EPS rating above 80, price above ₹20, market cap above ₹500 Cr, in three baskets (small 500–10,000 Cr, medium 10,000–20,000 Cr, large 20,000 Cr and above). RS scan: RS above 80, within 20% of the high, above the 200-DMA, 30-day traded value above ₹5 Cr. IPO scan: listed within the year, market cap above ₹500 Cr, price above ₹20. All of these are presets on the Screener page.</p>
+      <p class="note"><b>Entry.</b> Long bases, flags and pennants; volume spikes are institutional footprints; buy near highs, not lows (confirmation over prediction); PE under 30 preferred unless growth justifies the valuation; tight pullback under 8%; stop near the base low, or an amount that risks under 1% of capital.</p>
+      <p class="note"><b>Exit.</b> In a strong market sell 30–50% of the position after a 15–20% move; in a weak market sell 50% after a 10–15% move. Prefer selling into strength. Trail the rest with the 21 EMA, or another trendline or pattern.</p>
+      <p class="note"><b>Mistakes to avoid.</b> Averaging down (the biggest, it can wreck a portfolio); ignoring position size; chasing noisy tips instead of the process. Discipline is everything, and risk management comes first.</p></details>`;
+}
+function wirePlan(j){
+  const P=planPrefs(),L=j.levels,$i=id=>document.getElementById(id);
+  $i('plReg').value=P.regime==='auto'?((st.tone==='w'||st.tone==='r')?'weak':'strong'):P.regime;
+  const calc=()=>{
+    const cap=+$i('plCap').value,risk=+$i('plRisk').value,en=+$i('plEntry').value,sl=+$i('plStop').value,reg=$i('plReg').value,out=$i('plOut');
+    prefs.plan={cap:cap>0?cap:P.cap,risk:risk>0?risk:P.risk,regime:reg};save();
+    if(!(cap>0&&risk>0&&en>0&&sl>0)){out.innerHTML='<p class="mut">Fill in capital, risk, entry and stop-loss.</p>';return}
+    if(sl>=en){out.innerHTML='<p style="color:var(--down)"><b>The stop-loss must be below the entry price for a long trade.</b></p>';return}
+    const rps=en-sl,maxRisk=cap*risk/100;let qty=Math.floor(maxRisk/rps);const byCap=Math.floor(cap/en),capped=qty>byCap;if(capped)qty=byCap;
+    const val=qty*en,real=qty*rps,wide=rps/en*100;
+    const strong=reg==='strong',T=strong?[[15,.30],[20,.20]]:[[10,.25],[15,.25]];
+    const f0=v=>'₹ '+nf0.format(Math.round(v)),f2=v=>'₹ '+nf2.format(v);
+    const warn=[];
+    if(risk>1)warn.push(`Risk of ${nf1.format(risk)}% is above the 1% rule.`);
+    if(wide>8)warn.push(`The stop is ${nf1.format(wide)}% below the entry: wide. Wait for a tighter entry or take a smaller position.`);
+    if(capped)warn.push('The position is limited by your capital, so the real risk is below the limit you set.');
+    if(L.ema21&&en<L.ema21)warn.push(`The entry is below the 21 EMA (₹ ${nf2.format(L.ema21)}).`);
+    let sold=0,rows=T.map(([pc,fr],i)=>{const px=en*(1+pc/100),q=Math.round(qty*fr);sold+=q;return `<tr><td class="lab">Target ${i+1}: +${pc}%</td><td>${f2(px)}</td><td>sell ${nf0.format(q)} shares (${Math.round(fr*100)}%)</td><td>${nf1.format((px-en)/rps)}R · ${f0(q*(px-en))}</td></tr>`}).join('');
+    out.innerHTML=`${warn.map(w=>`<p style="color:var(--amber);margin:4px 0">⚠ ${esc(w)}</p>`).join('')}
+      <div class="kvg" style="margin:8px 0"><div><span>Shares to buy</span><b>${nf0.format(qty)}</b></div><div><span>Position value</span><b>${f0(val)}</b></div><div><span>Share of capital</span><b>${nf1.format(val/cap*100)}%</b></div>
+        <div><span>Risk if stopped out</span><b>${f0(real)} (${nf2.format(real/cap*100)}%)</b></div><div><span>Risk per share</span><b>${f2(rps)} (${nf1.format(wide)}%)</b></div></div>
+      <div class="card scroll ftbl" style="padding:0;border:0"><table><thead><tr><th class="lab" style="text-align:left">${strong?'Strong market: sell 30–50% after +15–20%':'Weak market: sell 50% after +10–15%'}</th><th>Price</th><th>Action</th><th>Gain</th></tr></thead><tbody>${rows}
+        <tr><td class="lab">Then trail the rest</td><td>${L.ema21?f2(L.ema21):'–'}</td><td colspan="2">stay in while it closes above the 21 EMA; sell into strength; do not average down</td></tr></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">Planned booking: ${nf0.format(sold)} of ${nf0.format(qty)} shares (${qty?Math.round(sold/qty*100):0}%). R is the risk per share: 1R is what you lose at the stop. <a href="#" id="plEma">Add the 21 EMA to the chart</a></p>`;
+    const a=$i('plEma');if(a)a.onclick=ev=>{ev.preventDefault();const ex=st.ind.find(e=>e.k==='ema'&&e.p[0]===21);if(ex)ex.on=true;else st.ind.push({id:Math.max(0,...st.ind.map(x=>x.id))+1,k:'ema',p:[21],c:st.ind.length+2,on:true});indChanged(true)};
+  };
+  ['plCap','plRisk','plEntry','plStop','plReg'].forEach(id=>$i(id).addEventListener('input',calc));
+  $i('plBase').onclick=ev=>{ev.preventDefault();$i('plStop').value=(L.low20||L.last*.93).toFixed(2);calc()};
+  calc();
+}
 function tScr(s){
   const mine=SAVED.length?SAVED.map(v=>{const ok=(v.syms||[]).includes(s.sym),nw=ok&&(v.new||[]).includes(s.sym);
     return `<div class="check"><span class="m ${ok?'ok':'no'}">${ok?'✓':'✕'}</span><span>${esc(v.name)}${nw?' <span class="tag up" title="Matched on the last session, not on the one before">NEW</span>':''}</span><span class="mut" style="margin-left:auto">${v.count} stocks</span></div>`}).join('')
@@ -2751,7 +2817,7 @@ function tCred(s){
   <p class="note">Pledge: under 5% of promoter shares reads as low, 5–25% moderate, above 25% high. Source: NSE shareholding and pledge disclosures${c.pledgeAsof?` (pledge as of ${c.pledgeAsof})`:''}. Cash conversion, receivable days and auditor remarks are not loaded, so no overall credibility score is shown.</p></div>`;
 }
 function renderPanel(){
-  const f={fund:tFund,tech:tTech,peers:tPeers,ins:tIns,scr:tScr,cred:tCred}[st.tab];
+  const f={fund:tFund,tech:tTech,peers:tPeers,ins:tIns,scr:tScr,plan:tPlan,cred:tCred}[st.tab];
   $('#panel').innerHTML=f(cur);
 }
 
@@ -2985,7 +3051,7 @@ async function loadTone(){
     const c=[box(D.r4[i],200,50),box(D.r4_chg[i],20,-20),box(D.r20[i],75,50),box(D.r20_chg[i],20,-20),box(D.r50[i],85,60),box(D.r50_chg[i],20,-20)];
     const g=c.filter(x=>x==='g').length,rd=c.filter(x=>x==='r').length,day=g-rd>=3?'g':rd-g>=3?'r':rd>=3?'w':'n';
     const el=$('#tone'),fm=v=>v==null?'–':Math.abs(v)>=1000?nf0.format(v):nf1.format(v);
-    el.className='tone '+day;el.hidden=false;
+    el.className='tone '+day;el.hidden=false;st.tone=day;
     el.innerHTML=`<i></i>${{g:'Green day',r:'Red day',w:'Warning day',n:'Neutral day'}[day]}`;
     el.title=`Breadth on ${D.dates[i]}${D.live?` (live, as of ${D.live.asof.slice(11,16)} IST)`:''}: 4R ${fm(D.r4[i])} · 20R ${fm(D.r20[i])} · 50R ${fm(D.r50[i])} · ${g} green and ${rd} red cells of 6. Click for the breadth page.`;
     

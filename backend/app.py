@@ -388,6 +388,57 @@ def quotes(syms: str):
     return out
 
 
+@app.get("/api/plan/{sym}")
+def api_plan(sym: str):
+    """The swing playbook's checklist for one stock (selection, relative strength, entry) and the price levels the trade planner starts from."""
+    sym = sym.upper()
+    snap = market_tables()["snap"]
+    if sym not in snap.index:
+        raise HTTPException(404, "no price data for this stock")
+    r = snap.loc[sym]
+    ft = fund_table()
+    f = ft.loc[sym] if sym in ft.index and not bool(ft.loc[sym, "stale"]) else None
+    sv = lambda row, k: None if row is None or k not in row.index else clean(row[k])
+    last, mcap = sv(r, "last"), sv(r, "mcap")
+    checks = []
+
+    def add(group, label, value, ok, note=None):
+        checks.append({"group": group, "label": label, "value": value, "ok": ok, "note": note})
+
+    nf = lambda v, d=1, suf="": "no data" if v is None else f"{v:,.{d}f}{suf}"
+    py, state = sv(f, "profit_yoy"), sv(f, "profit_state")
+    add("Selection", "Quarterly profit growth above 25%", "turned profitable" if state == "loss_to_profit" else nf(py, 0, "%"), None if f is None else bool(state == "loss_to_profit" or (py is not None and py > 25)))
+    er = sv(f, "eps_rating")
+    add("Selection", "EPS rating above 80", nf(er, 0), None if er is None else er > 80, "Our estimate from profit growth: newest quarter, the one before, and three years.")
+    basket = None if mcap is None else "Below 500 Cr" if mcap < 500 else "Small basket (500 to 10,000 Cr)" if mcap < 10000 else "Medium basket (10,000 to 20,000 Cr)" if mcap < 20000 else "Large basket (20,000 Cr and above)"
+    add("Selection", "Market cap of Rs 500 Cr or more", nf(mcap, 0, " Cr"), None if mcap is None else mcap >= 500, basket)
+    add("Selection", "Price above Rs 20", nf(last, 2), None if last is None else last > 20)
+    rk, rkmax = sv(r, "ind_rank_3m"), clean(float(snap["ind_rank_3m"].max())) if "ind_rank_3m" in snap.columns else None
+    add("Selection", "Industry in the strongest quarter (3-month rank)", None if rk is None or not rkmax else f"#{rk:.0f} of {rkmax:.0f}", None if rk is None or not rkmax else rk <= 0.25 * rkmax,
+        "Industry triggers and fresh institutional buying are not measured here: check the Shareholding tab for FII and DII trends.")
+    rs = sv(r, "rs")
+    add("Relative strength", "RS rating above 80", nf(rs, 0), None if rs is None else rs > 80)
+    h52 = sv(r, "high52_pct")
+    add("Relative strength", "Within 20% of the 52-week high", None if h52 is None else f"{-h52:.1f}% below", None if h52 is None else h52 >= -20)
+    s200 = sv(r, "sma200")
+    add("Relative strength", "Above the 200-day average", None if s200 is None else f"200-DMA {s200:,.2f}", None if s200 is None or last is None else last > s200)
+    v30 = sv(r, "value30_cr")
+    add("Relative strength", "Average traded value above Rs 5 Cr (30 sessions)", nf(v30, 1, " Cr"), None if v30 is None else v30 > 5)
+    add("Entry", "Close to its high (within 10%): buy strength, not weakness", None if h52 is None else f"{-h52:.1f}% below", None if h52 is None else h52 >= -10)
+    pb = sv(r, "pullback20")
+    add("Entry", "Tight pullback under 8% from the 20-session high", None if pb is None else f"{pb:.1f}%", None if pb is None else pb < 8)
+    rv5, rv = sv(r, "rvol5"), sv(r, "rvol")
+    add("Entry", "Volume spike of 1.5x average or more in the last 5 sessions", None if rv5 is None else f"{rv5:.1f}x (today {rv:.1f}x)" if rv is not None else f"{rv5:.1f}x", None if rv5 is None else rv5 >= 1.5)
+    cb, cr, vs = sv(r, "consol_bars"), sv(r, "consol_range"), sv(r, "vcp_status")
+    base = bool(sv(r, "consol_active")) or vs in ("forming", "breakout")
+    add("Entry", "In a base, flag or pennant", f"{cb:.0f} sessions, range {cr:.0f}%" if sv(r, "consol_active") and cb else (f"VCP {vs}" if vs else "no base now"), base)
+    pe = sv(f, "pe")
+    add("Entry", "PE under 30, unless growth justifies it", nf(pe, 1, "x"), None if pe is None else pe < 30, None if pe is None or pe < 30 else "Above 30: acceptable only if profit growth is strong enough to justify the multiple.")
+    levels = {"last": last, "ema21": sv(r, "ema21"), "low20": sv(r, "low20"), "high20": sv(r, "high20"), "sma50": sv(r, "sma50"), "sma200": s200,
+              "base_range": cr if sv(r, "consol_active") else None, "mcap": mcap, "basket": basket, "asof": str(r["asof"]) if "asof" in r.index else None}
+    return {"sym": sym, "name": sv(r, "name"), "checks": checks, "levels": levels}
+
+
 @app.get("/api/company/{sym}")
 def api_company(sym: str, refresh: int = 0):
     """About, annual statements, ratios, shareholding and documents for the Fundamentals tab (see backend/company.py)."""
@@ -803,8 +854,8 @@ def api_run(body: dict = Body(...)):
     in_desk = {r["sym"] for r in db.connect().execute("SELECT sym FROM stock WHERE desk=1")}
     cols = ["name", "last", "chg", "value_cr", "stage", "template", "supertrend", "sar", "rs", "rs1m", "rs3m", "rs6m",
             "rs12m", "vs500_55", "vs500_123", "mansfield", "momentum", "high52_pct", "consol_bars", "consol_range", "consol_breakout", "vcp_status", "vcp_n", "vcp_last", "vcp_dist",
-            "industry", "sector", "ind_3m", "ind_rank_3m", "mcap", "rsi14", "vs500_252"]
-    fcols = ["grade", "sales_yoy", "profit_yoy", "profit_state", "opm_ttm", "pe", "pb", "roce", "gnpa_pct", "nnpa_pct", "pledge_pct", "promo_chg", "insider_net", "latest_q", "is_fin", "checked", "profit_cagr3", "profit_cagr_fy", "de"]
+            "industry", "sector", "ind_3m", "ind_rank_3m", "mcap", "rsi14", "vs500_252", "pullback20", "rvol5", "listed_days", "value30_cr"]
+    fcols = ["grade", "sales_yoy", "profit_yoy", "profit_state", "opm_ttm", "pe", "pb", "roce", "gnpa_pct", "nnpa_pct", "pledge_pct", "promo_chg", "insider_net", "latest_q", "is_fin", "checked", "profit_cagr3", "profit_cagr_fy", "de", "eps_rating"]
     rows = []
     for sym, r in hit.head(int(body.get("limit") or 300)).iterrows():
         d = {"sym": sym, "in_desk": sym in in_desk}
