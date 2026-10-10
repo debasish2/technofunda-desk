@@ -635,6 +635,12 @@ tr.pick{cursor:pointer}tr.pick:hover td{background:var(--soft)}
           <button class="tg" id="setBtn" aria-expanded="false" title="Chart settings">⚙ <span class="lbx">Settings</span></button>
           <div class="pop" id="pop" hidden>
             <label><input type="checkbox" id="sVol" checked> Volume</label>
+            <div class="row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:3px 0"><span title="Standard bars are coloured by the day's direction. Simple volume shows only the volume that matters: pocket pivots in blue, heavy up days in green, heavy down days in red, dry volume in orange, everything else grey.">Volume style</span><select id="sVstyle" style="border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);padding:3px 8px"><option value="std">Standard</option><option value="simple">Simple volume</option></select></div>
+            <div id="vsOpts" hidden style="padding:0 0 4px 10px">
+              <label title="A day with 3 times its 50-day average volume that closes in the top 35% of its range and above the previous close (Oliver Kell's bull snort): a purple square under the bar"><input type="checkbox" id="sVsn" checked> Bull snorts (purple square)</label>
+              <label title="The latest bars that set the highest volume ever (HVE), in a year (HVY) or in a quarter (HVQ), and the lowest in a quarter (Q) or a year (Y)"><input type="checkbox" id="sVhv" checked> Highest and lowest volume labels</label>
+              <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:3px 0"><span title="An up day whose volume beats the highest down-day volume of the last N days is a pocket pivot">Pocket pivot lookback</span><select id="sVpp" style="border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);padding:3px 8px"><option value="5">5 days</option><option value="10" selected>10 days</option><option value="20">20 days</option></select></div>
+            </div>
             <button class="tg row" id="vcBtn" aria-pressed="false" title="Mark the pullbacks of a volatility contraction pattern and its pivot, when the stock has one">VCP: contractions and pivot</button>
             <button class="tg row" id="vpBtn" aria-pressed="false" title="Where the volume in the bars on screen was traded, drawn along the right edge">Volume profile (visible range)</button>
             <button class="tg row mob" data-proxy="grBtn" aria-pressed="false">Result grades on the chart</button>
@@ -689,6 +695,54 @@ const nf2=new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFraction
 const nf1=new Intl.NumberFormat('en-IN',{maximumFractionDigits:1});
 const nf0=new Intl.NumberFormat('en-IN',{maximumFractionDigits:0});
 const sgn=(v,d=2)=>(v>=0?'+':'−')+Math.abs(v).toFixed(d)+'%';
+/* ---------- Simple volume: after the TradingView indicator "Simple Volume with Pocket Pivots" by finallynitin ----------
+   Only the volume that matters is coloured; the rest is grey noise.
+     blue    pocket pivot: an up day whose volume beats the highest down-day volume of the last N days (default 10)
+     green   up day with volume above its 50-period average       red   down day with volume above its 50-period average
+     orange  dry volume: at most a fifth of the average, or the lowest in a quarter
+     purple square under the bar: bull snort (volume 3x average, close in the top 35% of the range and above the previous close)
+   Labels: HVE / HVY / HVQ on the latest bars with the highest volume ever / in a year / in a quarter; Q and Y for the lowest in a quarter and a year. */
+const SVOL={c:null};
+function simpleVolume(B){
+  const n=B.length,key=cur.sym+'|'+st.iv+'|'+n+'|'+B[n-1].d+'|'+B[n-1].v+'|'+st.vpp;
+  if(SVOL.c&&SVOL.c.key===key)return SVOL.c.v;
+  const N=50,PP=st.vpp||10,V=B.map(b=>b.v);
+  const upD=B.map((b,i)=>i?b.c>B[i-1].c:b.c>=b.o),dnD=B.map((b,i)=>i?b.c<B[i-1].c:b.c<b.o);
+  const ma=new Array(n);let sum=0;
+  for(let i=0;i<n;i++){sum+=V[i];if(i>=N)sum-=V[i-N];ma[i]=sum/Math.min(i+1,N)}      // with fewer bars than 50 (a new listing) it averages what exists
+  const lowIn=(i,L)=>i>=L-1&&V[i]<=Math.min(...V.slice(i-L+1,i+1));
+  const cls=new Array(n),snort=new Array(n).fill(false),lowQ=new Array(n).fill(false),lowY=new Array(n).fill(false);
+  for(let i=0;i<n;i++){
+    let md=0;for(let j=Math.max(1,i-PP);j<i;j++)if(dnD[j]&&V[j]>md)md=V[j];
+    lowQ[i]=lowIn(i,63);lowY[i]=lowIn(i,252);
+    if(upD[i]&&V[i]>md&&i>0)cls[i]='ppv';
+    else if(upD[i]&&V[i]>ma[i])cls[i]='up';
+    else if(dnD[i]&&V[i]>ma[i])cls[i]='down';
+    else if(V[i]<=ma[i]*.2||lowQ[i])cls[i]='dry';
+    else cls[i]='norm';
+    const b=B[i];snort[i]=i>0&&V[i]>=3*ma[i]&&b.h>b.l&&(b.c-b.l)/(b.h-b.l)>=.65&&b.c>B[i-1].c;
+  }
+  const hv=[];                                               // the latest bar of each kind: highest volume ever, in a year, in a quarter
+  for(const [name,L] of [['HVE',1e9],['HVY',252],['HVQ',63]]){
+    for(let i=n-1;i>=20;i--){let m=0;for(let j=Math.max(0,i-L);j<i;j++)if(V[j]>m)m=V[j];if(V[i]>m){if(!hv.some(h=>h.i===i))hv.push({i,name});break}}
+  }
+  const lastLow=a=>{for(let i=n-1;i>=0;i--)if(a[i])return i;return -1},lq=lastLow(lowQ),ly=lastLow(lowY);
+  const k=(c)=>({ppv:'#2962ff',up:col('--up'),down:col('--down'),dry:'#ff9800',norm:(document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme: dark)').matches))?'#4b5160':'#a3a9b6'}[c]);
+  const out={cls,ma,snort,hv,lq,ly,color:cls.map(k)};
+  SVOL.c={key,v:out};return out;
+}
+const SVNAME={ppv:'pocket pivot',up:'heavy up day',down:'heavy down day',dry:'dry volume',norm:'normal volume'};
+function svMarkers(SV,B){                                    // series markers for the TradingView-style chart, in time order
+  const m=[];
+  if(st.vsn)B.forEach((b,i)=>{if(SV.snort[i])m.push({time:b.d,position:'belowBar',color:'#9c27b0',shape:'square',text:''})});
+  if(st.vhv){
+    for(const h of SV.hv)m.push({time:B[h.i].d,position:'aboveBar',color:'#f5b800',shape:'arrowDown',text:h.name+' '+volIN(B[h.i].v)});
+    if(SV.lq>=0&&!SV.hv.some(h=>h.i===SV.lq))m.push({time:B[SV.lq].d,position:'aboveBar',color:'#ff9800',shape:'circle',text:'Q'});
+    if(SV.ly>=0)m.push({time:B[SV.ly].d,position:'aboveBar',color:'#ff9800',shape:'circle',text:'Y'});
+  }
+  m.sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0);
+  const seen=new Set();return m.filter(x=>{const k=x.time+x.position;if(seen.has(k))return false;seen.add(k);return true});
+}
 const volIN=v=>v>=1e7?(v/1e7).toFixed(2)+'Cr':v>=1e5?(v/1e5).toFixed(2)+'L':v>=1e3?(v/1e3).toFixed(2)+'K':String(Math.round(v));   // Indian lakh / crore
 const short=v=>v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1e3).toFixed(2)+'K':String(Math.round(v));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -868,7 +922,7 @@ const BY=Object.fromEntries(S.map(s=>[s.sym,s]));
  S.forEach(s=>{const a=s.a;a.rs=clamp(pctile(rs,a.rsRaw),1,99);a.rs3=clamp(pctile(r3,a.r63??0),1,99);if(s.tech){a.rs=s.tech.rs??a.rs;a.rs3=s.tech.rs3m??a.rs3}a.tt=ttChecks(a);a.ttPass=a.tt.filter(x=>x.ok).length;a.scr=a.stale?[]:SCREENS.filter(c=>c.fn(a)).map(c=>c.id)})}
 
 /* ---------- state ---------- */
-const st={engine:'canvas',iv:'D',type:'bar',range:'Max',log:true,vol:true,pal:prefs.pal||'bm',vcp:!!prefs.vcp,vpvr:!!prefs.vp,pat:false,magnet:!!prefs.mg,keep:!!prefs.kp,lock:!!prefs.lk,dHide:!!prefs.hd,grades:false,insider:false,table:false,tool:'cursor',tab:'fund',list:'all',sortK:'chg',sortD:-1};
+const st={engine:'canvas',iv:'D',type:'bar',range:'Max',log:true,vol:true,vstyle:'std',vsn:true,vhv:true,vpp:10,pal:prefs.pal||'bm',vcp:!!prefs.vcp,vpvr:!!prefs.vp,pat:false,magnet:!!prefs.mg,keep:!!prefs.kp,lock:!!prefs.lk,dHide:!!prefs.hd,grades:false,insider:false,table:false,tool:'cursor',tab:'fund',list:'all',sortK:'chg',sortD:-1};
 let pan=null, cur=null, hover=null, pend=null, mouse={x:0,y:0}, view={}, ordered=[];
 const ivName={D:'1D',W:'1W',M:'1M'};
 const drawings=prefs.draw||{};
@@ -1005,7 +1059,21 @@ function draw(){
   // volume
   if(volH){
     const mv=Math.max(...bars.map(b=>b.v)),vy=padT+priceH+gap,bw=Math.max(1,step*.7);
+    if(st.vstyle==='simple'&&win.all.length>5){
+      const SV=simpleVolume(win.all);view.sv=SV;
+      c.globalAlpha=.92;for(let i=0;i<n;i++){const b=bars[i],h=b.v/mv*volH;c.fillStyle=SV.color[win.start+i];c.fillRect(xAt(i)-bw/2,vy+volH-h,bw,h)}c.globalAlpha=1;
+      c.textAlign='center';c.font='10px '+FONT;
+      for(let i=0;i<n;i++){const gi=win.start+i,h=bars[i].v/mv*volH;
+        if(st.vsn&&SV.snort[gi]){c.fillStyle='#9c27b0';c.fillRect(xAt(i)-3,vy+volH+2,6,6)}
+        if(st.vhv){const hh=SV.hv.find(x=>x.i===gi);
+          if(hh){c.fillStyle='#f5b800';c.fillText(hh.name,xAt(i),Math.max(vy+5,vy+volH-h-7))}
+          else if(gi===SV.ly){c.fillStyle='#ff9800';c.fillText('Y',xAt(i),vy+volH-h-7)}
+          else if(gi===SV.lq){c.fillStyle='#ff9800';c.fillText('Q',xAt(i),vy+volH-h-7)}}}
+      c.textAlign='left';c.fillStyle=muted;c.fillText('Simple volume · 50-period average '+volIN(SV.ma[win.all.length-1]),6,vy+6);
+      c.font='11.5px '+FONT;
+    }else{
     c.globalAlpha=.4;for(let i=0;i<n;i++){const b=bars[i],h=b.v/mv*volH;c.fillStyle=b.c>=b.o?up:down;c.fillRect(xAt(i)-bw/2,vy+volH-h,bw,h)}c.globalAlpha=1;
+    }
   }
   // price series
   const bw=Math.max(1,Math.floor(step*.7));
@@ -1096,7 +1164,7 @@ function renderPills(){
 }
 function legend(i){
   const bars=view.bars;if(!bars||!bars[i])return;const b=bars[i],pv=i>0?bars[i-1].c:b.o,ch=b.c-pv,bc=barCols(),cl=`style="color:${ch>=0?bc.up:bc.down}"`;
-  $('#legend').innerHTML=`<div><b>${esc(cur.name)}</b> <span class="mut">${ivName[st.iv]} · NSE</span> &nbsp;O <span ${cl}>${nf2.format(b.o)}</span> H <span ${cl}>${nf2.format(b.h)}</span> L <span ${cl}>${nf2.format(b.l)}</span> C <span ${cl}>${nf2.format(b.c)}</span> <span ${cl}>${ch>=0?'+':'−'}${nf2.format(Math.abs(ch))} (${sgn(ch/pv*100)})</span> <span ${cl}>Vol ${volIN(b.v)}</span></div>${resultNote(b)}<div class="mut">${indLegend(view.ind||[],i+(view.off||0))}</div>${view.patNote?`<div class="mut">▭ ${esc(view.patNote)}</div>`:''}${view.vcpNote?`<div style="color:var(--amber)">◇ ${esc(view.vcpNote)}</div>`:''}`;
+  $('#legend').innerHTML=`<div><b>${esc(cur.name)}</b> <span class="mut">${ivName[st.iv]} · NSE</span> &nbsp;O <span ${cl}>${nf2.format(b.o)}</span> H <span ${cl}>${nf2.format(b.h)}</span> L <span ${cl}>${nf2.format(b.l)}</span> C <span ${cl}>${nf2.format(b.c)}</span> <span ${cl}>${ch>=0?'+':'−'}${nf2.format(Math.abs(ch))} (${sgn(ch/pv*100)})</span> <span ${cl}>Vol ${volIN(b.v)}</span>${view.sv&&view.sv.cls[i+(view.off||0)]?` <span class="mut">· ${SVNAME[view.sv.cls[i+(view.off||0)]]}${st.vsn&&view.sv.snort[i+(view.off||0)]?' · bull snort':''}</span>`:''}</div>${resultNote(b)}<div class="mut">${indLegend(view.ind||[],i+(view.off||0))}</div>${view.patNote?`<div class="mut">▭ ${esc(view.patNote)}</div>`:''}${view.vcpNote?`<div style="color:var(--amber)">◇ ${esc(view.vcpNote)}</div>`:''}`;
 }
 const redraw=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(draw)};
 function syncChartBtns(){
@@ -2034,7 +2102,7 @@ const TV={chart:null,main:null,sig:'',rangeKey:null,touched:false,applyRange:nul
    if(TV.chart)TV.chart.resize(Math.max(100,Math.floor(r.width)),Math.max(100,Math.floor(r.height)));      // resized here, not by the library, so the re-fit below sees the new width
    const fit=()=>{if(TV.chart&&!TV.touched&&TV.applyRange)TV.applyRange()};clearTimeout(t0);t0=setTimeout(()=>{fit();t0=setTimeout(fit,500)},250)}).observe(w);}   // the chart finishes resizing a moment after its container
 const tvOK=()=>typeof LightweightCharts!=='undefined';
-const tvSig=()=>[cur.sym+'#'+cur.bars.length+'@'+cur.bars[cur.bars.length-1].c,st.iv,st.type,st.log,JSON.stringify(st.ind),st.vol,st.grades,st.insider,st.pal,barCols().up,barCols().down,st.vpvr,st.vcp,st.range,st.sel,JSON.stringify(drawings[cur.sym]||[]),st.dHide,st.pat,
+const tvSig=()=>[cur.sym+'#'+cur.bars.length+'@'+cur.bars[cur.bars.length-1].c,st.iv,st.type,st.log,JSON.stringify(st.ind),st.vol,st.vstyle,st.vsn,st.vhv,st.vpp,st.grades,st.insider,st.pal,barCols().up,barCols().down,st.vpvr,st.vcp,st.range,st.sel,JSON.stringify(drawings[cur.sym]||[]),st.dHide,st.pat,
   document.documentElement.dataset.theme||'',matchMedia('(prefers-color-scheme: dark)').matches].join('|');
 /* one chart primitive paints every drawing and the consolidation boxes, so they move and scale with the chart */
 class TvShapes{
@@ -2089,6 +2157,13 @@ function tvRender(){
   if(st.vol){
     const v=chart.addSeries(C.HistogramSeries,{priceFormat:{type:'volume'},priceScaleId:'vol',lastValueVisible:true,priceLineVisible:false});
     v.priceScale().applyOptions({scaleMargins:{top:.82,bottom:0}});
+    if(st.vstyle==='simple'&&bars.length>5){
+      const SV=simpleVolume(bars);view.sv=SV;
+      v.setData(bars.map((b,i)=>({time:b.d,value:b.v,color:SV.color[i]})));
+      const mk=svMarkers(SV,bars);if(mk.length)C.createSeriesMarkers(v,mk);
+      const ml=chart.addSeries(C.LineSeries,{priceScaleId:'vol',lineVisible:false,lastValueVisible:true,priceLineVisible:false,crosshairMarkerVisible:false,color:col('--accent')});   // the 50-period average, as a label on the volume scale only
+      ml.setData(bars.map((b,i)=>({time:b.d,value:SV.ma[i]})));
+    }else
     v.setData(bars.map((b,i)=>({time:b.d,value:b.v,color:(b.c>=(i?bars[i-1].c:b.o)?up:down)+(i===bars.length-1?'':'55')})));
   }
   // indicators: overlays on the price pane, everything else in a pane of its own under it
@@ -2809,7 +2884,9 @@ function toggle(id,key,after){$('#'+id).addEventListener('click',e=>{st[key]=!st
 toggle('logBtn','log');toggle('patBtn','pat');toggle('grBtn','grades');toggle('inBtn','insider');toggle('tbBtn','table',()=>{renderTable();draw()});
 $$('[data-proxy]').forEach(b=>b.addEventListener('click',()=>{$('#'+b.dataset.proxy).click();b.setAttribute('aria-pressed',$('#'+b.dataset.proxy).getAttribute('aria-pressed'))}));
 $('#setBtn').addEventListener('click',e=>{$$('[data-proxy]').forEach(b=>b.setAttribute('aria-pressed',$('#'+b.dataset.proxy).getAttribute('aria-pressed')));syncPal();const p=$('#pop');p.hidden=!p.hidden;e.currentTarget.setAttribute('aria-expanded',!p.hidden)});
-[['sVol','vol']].forEach(([id,k])=>$('#'+id).addEventListener('change',e=>{st[k]=e.target.checked;draw()}));
+[['sVol','vol'],['sVsn','vsn'],['sVhv','vhv']].forEach(([id,k])=>$('#'+id).addEventListener('change',e=>{st[k]=e.target.checked;draw()}));
+$('#sVstyle').addEventListener('change',e=>{st.vstyle=e.target.value;$('#vsOpts').hidden=st.vstyle!=='simple';draw()});
+$('#sVpp').addEventListener('change',e=>{st.vpp=+e.target.value;draw()});
 document.addEventListener('click',e=>{if(!e.target.closest('.popwrap')){$('#pop').hidden=true;$('#setBtn').setAttribute('aria-expanded',false)}if(!e.target.closest('.search'))$('#results').hidden=true});
 $('#tvBtn').addEventListener('click',()=>setEngine(st.engine==='tv'?'canvas':'tv'));
 if(prefs.engine!=='canvas')setEngine('tv',true);
@@ -2922,15 +2999,17 @@ loadTone();setInterval(()=>{if(!document.hidden)loadTone()},10*60*1000);
   if(cs){
     if(['candle','bar','line'].includes(cs.type))st.type=cs.type;
     if(['D','W','M'].includes(cs.iv))st.iv=cs.iv;
-    for(const k of ['log','vol','pat','grades','insider','table'])if(typeof cs[k]==='boolean')st[k]=cs[k];
+    for(const k of ['log','vol','pat','grades','insider','table','vsn','vhv'])if(typeof cs[k]==='boolean')st[k]=cs[k];
+    if(cs.vstyle==='simple'||cs.vstyle==='std')st.vstyle=cs.vstyle;
+    if([5,10,20].includes(cs.vpp))st.vpp=cs.vpp;
   }
   $$('#ivSeg [data-iv]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.iv===st.iv));
   $$('#tySeg [data-ty]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ty===st.type));
   [['logBtn','log'],['patBtn','pat'],['grBtn','grades'],['inBtn','insider'],['tbBtn','table']].forEach(([id,k])=>$('#'+id).setAttribute('aria-pressed',st[k]));
-  $('#sVol').checked=st.vol;syncDD();
+  $('#sVol').checked=st.vol;$('#sVstyle').value=st.vstyle;$('#sVsn').checked=st.vsn;$('#sVhv').checked=st.vhv;$('#sVpp').value=String(st.vpp);$('#vsOpts').hidden=st.vstyle!=='simple';syncDD();
 }
 function persistChartState(){
-  const cs={type:st.type,iv:st.iv,log:st.log,vol:st.vol,pat:st.pat,grades:st.grades,insider:st.insider,table:st.table},k=JSON.stringify(cs);
+  const cs={type:st.type,iv:st.iv,log:st.log,vol:st.vol,pat:st.pat,grades:st.grades,insider:st.insider,table:st.table,vstyle:st.vstyle,vsn:st.vsn,vhv:st.vhv,vpp:st.vpp},k=JSON.stringify(cs);
   if(k!==persistChartState.k){persistChartState.k=k;prefs.cs=cs;save()}
 }
 persistChartState.k=JSON.stringify(prefs.cs||null);
