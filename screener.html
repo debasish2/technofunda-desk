@@ -59,6 +59,32 @@ main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:36
 .chips button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
 .chips button:hover{border-color:var(--accent);color:var(--accent)}
 .chiprow[hidden]{display:none}
+.scanbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+.scanwrap{position:relative;max-width:100%}
+.scanbtn{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;max-width:100%}
+.scanbtn:hover,.scanbtn[aria-expanded=true]{border-color:var(--accent)}
+.scanbtn .mut{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.scanbtn b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46ch}
+.scanpop{position:absolute;left:0;top:calc(100% + 6px);z-index:40;width:min(560px,94vw);max-height:min(72vh,640px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 38px rgba(0,0,0,.25);padding:10px}
+.scanpop[hidden]{display:none}
+.scanpop input[type=search]{width:100%;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);padding:0 12px;font:inherit;margin:0 0 6px;position:sticky;top:0}
+.sgrp{border-top:1px solid var(--line);padding:2px 0}
+.sgrp:first-of-type{border-top:0}
+.sgrp>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 6px;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.sgrp>summary::-webkit-details-marker{display:none}
+.sgrp>summary::before{content:'▸';font-size:11px;transition:transform .12s}
+.sgrp[open]>summary::before{transform:rotate(90deg)}
+.sgrp>summary .ct{margin-left:auto;font-weight:500;letter-spacing:0}
+.si{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px}
+.si:hover{background:var(--soft)}
+.si.act{background:color-mix(in srgb,var(--accent) 11%,var(--panel));color:var(--accent)}
+.si .nm{flex:1;min-width:0}
+.si .n{color:var(--muted);font-size:12.5px}
+.si .new{background:var(--accent);color:#fff;border-radius:999px;padding:0 7px;font-size:11.5px}
+.si .x{border:0;background:none;color:var(--muted);font-size:17px;line-height:1;padding:0 4px;cursor:pointer}
+.si .x:hover{color:var(--down)}
+.scanpop .none{padding:14px;color:var(--muted);text-align:center;font-size:13px}
+@media (max-width:760px){.scanwrap{width:100%}.scanbtn{width:100%;justify-content:space-between}.scanpop{width:100%}}
 .sv{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--panel);overflow:hidden}
 .sv button{border:0;background:none;padding:6px 12px;font-size:13px}
 .sv button:hover{color:var(--accent)}
@@ -144,8 +170,9 @@ main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:36
       <div class="search"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg><input id="q" type="search" placeholder="Search companies…" autocomplete="off" aria-label="Filter the results by symbol or company name"></div>
     </div>
     <div id="warn"></div>
-    <div class="chiprow"><span class="mut">Start from</span><span id="presets" class="chips"></span></div>
-    <div class="chiprow" id="savedRow" hidden><span class="mut">My screens</span><span id="saved" class="chips"></span></div>
+    <div class="scanbar"><div class="scanwrap" id="scanWrap"><button type="button" class="scanbtn" id="scanBtn" aria-expanded="false" aria-haspopup="true"><span class="mut">Scan</span><b id="scanName">Choose a scan</b><i>▾</i></button>
+      <div class="scanpop" id="scanPop" hidden><input type="search" id="scanQ" placeholder="Find a scan…" aria-label="Find a scan" autocomplete="off"><div id="scanList"></div></div></div>
+      <span class="note" id="scanNote"></span></div>
     <div class="result" id="result"></div>
   </section>
 </main>
@@ -294,17 +321,59 @@ $('#result').addEventListener('click',e=>{
 });
 document.addEventListener('click',e=>{const p=$('#colPop');if(p&&!p.hidden&&!e.target.closest('.colmenu'))p.hidden=true});
 /* saved screens: keep a set of filters under a name; the nightly run records who matched, so each chip shows what is new */
+const PGROUP={'Growth and quality':['Strong results in an uptrend','Early turnarounds, price confirming','Quality at a fair price, trending','Accelerating earnings + RS leaders'],
+  'Bases and breakouts':['Tight bases in leaders','VCP setups in leaders','Fresh breakouts from a base'],
+  'Techno Funda scans':['Super growth scan','Techno Funda'],
+  'Swing playbook':['Earnings scan: profit +25%, Rs 1,000-10,000 Cr','EPS scan, small: Rs 500-10,000 Cr','EPS scan, medium: Rs 10,000-20,000 Cr','EPS scan, large: Rs 20,000 Cr and above','RS scan: RS 80+, within 20% of the high','IPO scan: listed within a year','Swing entry: near highs, tight, volume spike']};
+let PACT=(()=>{try{return localStorage.getItem('setupdesk.scrpreset')||''}catch(e){return ''}})();     // the preset last applied (its name), shown on the Scan button
 async function loadSaved(){
   try{SAVED=await (await fetch('/api/screens')).json()}catch(e){SAVED=[]}
-  $('#savedRow').hidden=!SAVED.length;
-  $('#saved').innerHTML=SAVED.map(s=>`<span class="sv${String(s.id)===LAST?' act':''}" data-id="${s.id}"><button data-open="${s.id}" title="Open this screen${s.new_since?` (compared with ${esc(s.new_since)})`:''}">${esc(s.name)}<span class="n">${s.count}</span>${s.new.length?`<span class="new">+${s.new.length} new</span>`:''}</button><button class="x" data-del="${s.id}" title="Delete this screen">×</button></span>`).join('');
+  renderScans();
 }
-$('#saved').onclick=async e=>{
-  const o=e.target.closest('[data-open]'),x=e.target.closest('[data-del]');
-  if(o){const s=SAVED.find(v=>v.id==o.dataset.open);if(!s)return;try{localStorage.setItem('setupdesk.scrlast',String(s.id))}catch(_){}LAST=String(s.id);
-    try{const r=await fetch('/api/screens/'+s.id+'/refresh',{method:'POST'});if(r.ok){const f=await r.json();Object.assign(s,f)}}catch(_){}
-    $('#minval').value=s.min_value_cr||0;pendingNew=new Set(s.new);applyPreset(s.filters);loadSaved()}
-  else if(x){const s=SAVED.find(v=>v.id==x.dataset.del);if(s&&confirm('Delete the saved screen "'+s.name+'"?')){await fetch('/api/screens/'+s.id,{method:'DELETE'});loadSaved()}}
+function scanLabel(){
+  const sv=LAST&&SAVED.find(v=>String(v.id)===LAST);
+  if(sv)return sv.name;
+  if(PACT&&PRESETS.some(p=>p.name===PACT))return PACT;
+  return 'Choose a scan';
+}
+function renderScans(){
+  const q=($('#scanQ').value||'').trim().toLowerCase(),hit=n=>!q||n.toLowerCase().includes(q);
+  const sv=SAVED.filter(s=>hit(s.name)),act=scanLabel();
+  const row=(attrs,name,extra,on)=>`<div class="si${on?' act':''}" ${attrs}><span class="nm">${esc(name)}</span>${extra}</div>`;
+  let h='';
+  if(SAVED.length)h+=`<details class="sgrp" open><summary>My screens<span class="ct">${sv.length}${q?' of '+SAVED.length:''}</span></summary>${sv.map(s=>row(`data-open="${s.id}" title="Open this screen${s.new_since?` (compared with ${esc(s.new_since)})`:''}"`,s.name,`<span class="n">${s.count}</span>${s.new.length?`<span class="new">+${s.new.length} new</span>`:''}<button class="x" data-del="${s.id}" title="Delete this saved screen" aria-label="Delete ${esc(s.name)}">×</button>`,String(s.id)===LAST)).join('')||'<div class="none">No saved screen matches.</div>'}</details>`;
+  for(const [g,names] of Object.entries(PGROUP)){
+    const items=names.map(n=>[n,PRESETS.findIndex(p=>p.name===n)]).filter(([n,i])=>i>=0&&hit(n));
+    if(!items.length)continue;
+    const open=q||items.some(([n])=>n===act&&!LAST)||(!SAVED.length&&g==='Techno Funda scans');
+    h+=`<details class="sgrp"${open?' open':''}><summary>${esc(g)}<span class="ct">${items.length}</span></summary>${items.map(([n,i])=>row(`data-p="${i}"`,n,'',!LAST&&n===act)).join('')}</details>`;
+  }
+  $('#scanList').innerHTML=h||'<div class="none">Nothing matches.</div>';
+  $('#scanName').textContent=scanLabel();
+  const nw=SAVED.reduce((a,s)=>a+s.new.length,0);
+  $('#scanNote').textContent=nw?`${nw} new match${nw>1?'es':''} in your saved screens`:'';
+}
+const closeScans=()=>{$('#scanPop').hidden=true;$('#scanBtn').setAttribute('aria-expanded','false')};
+$('#scanBtn').onclick=()=>{const p=$('#scanPop');p.hidden=!p.hidden;$('#scanBtn').setAttribute('aria-expanded',String(!p.hidden));if(!p.hidden){renderScans();$('#scanQ').focus()}};
+$('#scanQ').oninput=renderScans;
+document.addEventListener('click',e=>{if(!e.target.closest('#scanWrap'))closeScans()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeScans()});
+async function openSaved(id){
+  const s=SAVED.find(v=>v.id==id);if(!s)return;
+  try{localStorage.setItem('setupdesk.scrlast',String(s.id))}catch(_){}LAST=String(s.id);PACT='';
+  try{const r=await fetch('/api/screens/'+s.id+'/refresh',{method:'POST'});if(r.ok){const f=await r.json();Object.assign(s,f)}}catch(_){}
+  $('#minval').value=s.min_value_cr||0;pendingNew=new Set(s.new);applyPreset(s.filters);loadSaved();
+}
+function usePreset(i){
+  LAST='';try{localStorage.removeItem('setupdesk.scrlast');localStorage.setItem('setupdesk.scrpreset',PRESETS[i].name)}catch(_){}PACT=PRESETS[i].name;
+  $('#minval').value=0;                                    // a preset sets no liquidity floor of its own: do not keep the one from a screen opened before
+  applyPreset(PRESETS[i].set);renderScans();
+}
+$('#scanList').onclick=async e=>{
+  const x=e.target.closest('[data-del]'),o=e.target.closest('[data-open]'),pr=e.target.closest('[data-p]');
+  if(x){e.stopPropagation();const s=SAVED.find(v=>v.id==x.dataset.del);if(s&&confirm('Delete the saved screen "'+s.name+'"?')){await fetch('/api/screens/'+s.id,{method:'DELETE'});if(LAST===String(s.id))LAST='';loadSaved()}return}
+  if(o){closeScans();openSaved(o.dataset.open);return}
+  if(pr){closeScans();usePreset(+pr.dataset.p)}
 };
 $('#save').onclick=async()=>{
   const filters=collect();if(!Object.keys(filters).length){alert('Tick at least one filter first.');return}
@@ -318,10 +387,8 @@ $('#clear').onclick=()=>{try{localStorage.removeItem(FKEY)}catch(e){}document.qu
   FIELDS=await (await fetch('/api/screener/fields')).json();build();
   loadSaved();
   $('#filters').addEventListener('change',()=>setTimeout(saveFilters,0));$('#filters').addEventListener('input',()=>setTimeout(saveFilters,0));$('#minval').addEventListener('change',saveFilters);
-  $('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${esc(p.name)}</button>`).join('');
-  $('#presets').onclick=e=>{const b=e.target.closest('button[data-p]');if(b){LAST='';try{localStorage.removeItem('setupdesk.scrlast')}catch(_){}applyPreset(PRESETS[+b.dataset.p].set);loadSaved()}};
   {const pi=new URLSearchParams(location.search).get('preset');
-   if(pi!=null&&PRESETS[+pi])applyPreset(PRESETS[+pi].set);
+   if(pi!=null&&PRESETS[+pi]){PACT=PRESETS[+pi].name;LAST='';applyPreset(PRESETS[+pi].set);renderScans()}
    else{try{const o=JSON.parse(localStorage.getItem(FKEY)||'null');
      if(o&&(Object.keys(o.filters||{}).length||o.minval)){if(Number.isFinite(o.minval))$('#minval').value=o.minval;if(Object.keys(o.filters||{}).length)applyPreset(o.filters);else run()}}catch(e){}}}
   try{const c=await (await fetch('/api/screener/coverage')).json();
