@@ -106,6 +106,14 @@ def step_classify(report):
     return f"{total} stocks classified"
 
 
+def step_mfunds(report):
+    """Mutual funds: every kept scheme's newest NAVs from AMFI (days missed since the last run are fetched too), then the returns and risk figures."""
+    from . import funds
+    n = funds.daily(log=log)
+    report["mfunds"] = n
+    return f"{n} funds updated"
+
+
 def step_disclosures(report):
     """Insider trades, promoter holding and pledge: daily for the Desk's stocks, weekly (resumable) for all of them."""
     con = db.connect()
@@ -196,7 +204,7 @@ def main(argv):
     report = {"started": datetime.now().isoformat(timespec="seconds"), "weekly": weekly, "steps": [], "ok": False}
     code = 0
     try:
-        steps = ([("market", step_market)] if "--skip-market" not in argv else []) + [("extras", step_extras), ("desk", step_desk), ("classify", step_classify), ("screens", step_screens), ("disclosures", step_disclosures)]
+        steps = ([("market", step_market)] if "--skip-market" not in argv else []) + [("extras", step_extras), ("desk", step_desk), ("classify", step_classify), ("screens", step_screens), ("mfunds", step_mfunds), ("disclosures", step_disclosures)]
         if weekly:
             steps.append(("fundamentals", step_funds))
             steps.append(("standalone", step_standalone))

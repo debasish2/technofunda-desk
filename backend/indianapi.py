@@ -47,8 +47,30 @@ SALES_TOL = 0.02          # IndianAPI rounds to whole crore, so also allow 1 cro
 OP_TOL_PP = 3.0           # operating profit may differ by this many points of sales (same rule as stitch.disagrees)
 
 
+IA_DB = ROOT / "data" / "ia.db"
+IA_SCHEMA = """
+CREATE TABLE IF NOT EXISTS ia_stat (sym TEXT, stat TEXT, fetched TEXT, body TEXT, PRIMARY KEY (sym, stat));
+CREATE TABLE IF NOT EXISTS ia_usage (month TEXT PRIMARY KEY, calls INTEGER);
+"""
+
+
 def _con():
-    return db.connect()
+    """The downloader's connection. Its own tables (statements as sent, call counts) live in data/ia.db, in write-ahead mode; the main database is attached as `m` for
+    everything else (ia_fetch, quarter, stock...). A name that exists only in the main database resolves there; ia_stat and ia_usage resolve to ia.db. So a long
+    write by the nightly or weekly job can no longer make a download fail with 'database is locked' (it did, on the first Saturday run)."""
+    import sqlite3
+    db.connect().close()                                            # makes sure the main database and its tables exist
+    IA_DB.parent.mkdir(exist_ok=True)
+    con = sqlite3.connect(IA_DB, timeout=180)
+    con.row_factory = sqlite3.Row
+    con.execute("PRAGMA journal_mode=WAL")
+    con.executescript(IA_SCHEMA)
+    con.execute("ATTACH DATABASE ? AS m", (str(db.DB_PATH),))
+    if con.execute("SELECT COUNT(*) FROM main.ia_stat").fetchone()[0] == 0 and con.execute("SELECT COUNT(*) FROM m.ia_stat").fetchone()[0]:     # one-time move
+        con.execute("INSERT OR IGNORE INTO main.ia_stat SELECT * FROM m.ia_stat")
+        con.execute("INSERT OR IGNORE INTO main.ia_usage SELECT * FROM m.ia_usage")
+        con.commit()
+    return con
 
 
 def key():
@@ -372,7 +394,7 @@ def apply_annual(sym, con=None):
 STAT_STATUSES = ("ok", "confirmed", "np_differs", "op_differs", "break", "stats_only")     # the company is the right one (the quarterly check may still have failed)
 WIDE_SQL = "status IN " + str(STAT_STATUSES)
 STATS = ("balancesheet", "cashflow", "ratios", "shareholding_pattern_quarterly", "shareholding_pattern_yearly", "profit_loss_stats")
-ALL_KEYS = ("quarter_results", "yoy_results") + STATS              # what stats=all returns, all of it in ONE call
+ALL_KEYS = ("quarter_results", "yoy_results") + STATS              # what stats=all returns, all of it in ONE call: every one of these is stored, so no stock is ever asked twice
 
 
 def fetch_all(con, sym):
@@ -391,7 +413,7 @@ def fetch_all(con, sym):
     now = datetime.now().isoformat(timespec="seconds")
     n = 0
     for k, v in body.items():
-        if k in STATS and isinstance(v, dict) and v:
+        if k in ALL_KEYS and isinstance(v, dict) and v:
             con.execute("INSERT OR REPLACE INTO ia_stat VALUES(?,?,?,?)", (sym, k, now, json.dumps(v, separators=(",", ":"))))
             n += 1
     con.commit()
@@ -428,7 +450,7 @@ def fetch_all_unasked(con, sym):
                 (sym, name, now, "stats_only", f"statements only; net profit agrees in {len(good)} of {len(common)} quarters", 1.0, None, q))
     n = 0
     for k, v in body.items():
-        if k in STATS and isinstance(v, dict) and v:
+        if k in ALL_KEYS and isinstance(v, dict) and v:
             con.execute("INSERT OR REPLACE INTO ia_stat VALUES(?,?,?,?)", (sym, k, now, json.dumps(v, separators=(",", ":"))))
             n += 1
     con.commit()
@@ -566,7 +588,7 @@ def main(argv):
         return
     elif "--stats" in argv:                                     # python -m backend.indianapi --stats balancesheet,cashflow --max-calls 1000
         want_all = argv[argv.index("--stats") + 1] == "all"
-        wanted = ["cashflow"] if want_all else [x for x in argv[argv.index("--stats") + 1].split(",") if x in STATS]
+        wanted = ["yoy_results"] if want_all else [x for x in argv[argv.index("--stats") + 1].split(",") if x in STATS]
         cap = int(argv[argv.index("--max-calls") + 1]) if "--max-calls" in argv else 0
         if not wanted or not cap:
             print("give --stats all (every statement in one call per stock) or any of", ", ".join(STATS), "and --max-calls N (the most calls this run may make)")

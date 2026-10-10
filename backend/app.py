@@ -440,7 +440,7 @@ def api_company_ia(sym: str, stat: str):
     from . import indianapi
     if stat not in indianapi.STATS:
         raise HTTPException(404, "unknown statement")
-    r = db.connect().execute("SELECT body, fetched FROM ia_stat WHERE sym=? AND stat=?", (sym.upper(), stat)).fetchone()
+    r = indianapi._con().execute("SELECT body, fetched FROM main.ia_stat WHERE sym=? AND stat=?", (sym.upper(), stat)).fetchone()
     return {"body": _json.loads(r["body"]), "fetched": r["fetched"]} if r else {}
 
 
@@ -647,6 +647,66 @@ def api_themes_put(body: dict = Body(...)):
 @app.get("/industries")
 def industries_page():
     return FileResponse(ROOT / "industries.html")
+
+
+@app.get("/funds")
+def funds_page():
+    return FileResponse(ROOT / "funds.html")
+
+
+FUND_SORTS = {"r1w", "r1m", "r3m", "r6m", "r1y", "r3y", "r5y", "r10y", "vol3y", "dd3y", "sharpe3y", "nav", "name"}
+
+
+@app.get("/api/funds/meta")
+def api_funds_meta():
+    """Categories and fund houses with at least one fund that has returns worked out, and the date of the newest NAV (see backend/funds.py)."""
+    from . import funds
+    con = funds.connect()
+    cats = [{"name": r[0], "n": r[1]} for r in con.execute("SELECT s.category, COUNT(*) FROM scheme s JOIN metric m ON m.code=s.code WHERE s.keep=1 GROUP BY s.category ORDER BY 2 DESC")]
+    amcs = [{"name": r[0], "n": r[1]} for r in con.execute("SELECT s.amc, COUNT(*) FROM scheme s JOIN metric m ON m.code=s.code WHERE s.keep=1 GROUP BY s.amc ORDER BY s.amc")]
+    return {"categories": cats, "amcs": amcs, "asof": con.execute("SELECT MAX(nav_date) FROM scheme").fetchone()[0], "funds": sum(c["n"] for c in cats)}
+
+
+@app.get("/api/funds")
+def api_funds(q: str = "", cat: str = "", amc: str = "", plan: str = "", sort: str = "r1y", dir: int = -1, limit: int = 400):
+    """Funds with their returns and risk figures, filtered and sorted. Funds without enough history for the sort column go last."""
+    from . import funds
+    if sort not in FUND_SORTS:
+        raise HTTPException(400, "unknown sort column")
+    where, args = ["s.keep=1"], []
+    for term in q.split():
+        where.append("s.name LIKE ?")
+        args.append(f"%{term}%")
+    if cat:
+        where.append("s.category=?")
+        args.append(cat)
+    if amc:
+        where.append("s.amc=?")
+        args.append(amc)
+    if plan in ("Direct", "Regular"):
+        where.append("s.plan LIKE ?")
+        args.append(plan + "%")
+    col = "s.name" if sort == "name" else "s.nav" if sort == "nav" else "m." + sort
+    order = f"{col} IS NULL, {col} {'DESC' if dir < 0 else 'ASC'}"
+    sql = (f"SELECT s.code, s.name, s.amc, s.category, s.plan, s.nav, s.nav_date, m.r1w, m.r1m, m.r3m, m.r6m, m.r1y, m.r3y, m.r5y, m.r10y, m.vol3y, m.dd3y, m.sharpe3y, m.first_d "
+           f"FROM scheme s JOIN metric m ON m.code=s.code WHERE {' AND '.join(where)} ORDER BY {order} LIMIT ?")
+    con = funds.connect()
+    rows = [dict(r) for r in con.execute(sql, args + [max(1, min(limit, 1000))])]
+    total = con.execute(f"SELECT COUNT(*) FROM scheme s JOIN metric m ON m.code=s.code WHERE {' AND '.join(where)}", args).fetchone()[0]
+    return {"rows": rows, "total": total}
+
+
+@app.get("/api/funds/{code}")
+def api_fund(code: str):
+    """One fund: its details, returns and risk figures, and the whole NAV history."""
+    from . import funds
+    con = funds.connect()
+    s = con.execute("SELECT * FROM scheme WHERE code=?", (code,)).fetchone()
+    if s is None:
+        raise HTTPException(404, "no such fund")
+    m = con.execute("SELECT * FROM metric WHERE code=?", (code,)).fetchone()
+    nav = [[r[0], r[1]] for r in con.execute("SELECT d, v FROM nav WHERE code=? ORDER BY d", (code,))]
+    return {"scheme": dict(s), "metric": dict(m) if m else None, "nav": nav}
 
 
 _fund = {}
