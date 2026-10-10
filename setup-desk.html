@@ -2330,6 +2330,25 @@ function annHtml(a){
   const chips=ANNK.filter(([k])=>k==='all'||have.has(k)).map(([k,l],i)=>`<button type="button" data-ak="${k}" aria-pressed="${i===0}">${l}</button>`).join('');
   return conc+rat+`<div class="card" id="annCard"><h4>Announcements <small class="mut">latest ${a.recent.length}, from BSE${a.asof?' · updated '+esc(a.asof.replace('T',' ')):''}</small></h4><div class="annf" id="annf">${chips}</div><div id="annl">${annList(a,'all')}</div></div>`;
 }
+const IA_META={
+  cashflow:{title:'Cash flow',unit:'₹ crore · years ending March',pct:/CFO\/OP/,d:0,bold:/^(Cash from Operating|Free Cash)/},
+  ratios:{title:'Ratios',unit:'days and % · years ending March',pct:/%/,d:0,bold:/^(ROCE|Cash Conversion)/},
+  profit_loss_stats:{title:'Growth and returns',unit:'% per year over each period',pct:/./,d:1,bold:/^Compounded Profit/},
+  shareholding_pattern_quarterly:{title:'Shareholding pattern, by quarter',unit:'% of shares',pct:/^(Promoters|FIIs|DIIs|Public|Government)/,d:0,bold:/^Promoters/},
+  shareholding_pattern_yearly:{title:'Shareholding pattern, by year',unit:'% of shares',pct:/^(Promoters|FIIs|DIIs|Public|Government)/,d:0,bold:/^Promoters/}
+};
+function iaTable(j,stat){
+  const M=IA_META[stat],b=j.body,labs=Object.keys(b);if(!labs.length)return '';
+  const periods=[...new Set(labs.flatMap(l=>Object.keys(b[l])))];                 // rows can end on different labels (TTM, 1 Year, Last Year): keep them all
+  const num=v=>typeof v==='string'?(isNaN(parseFloat(v))?null:parseFloat(v)):v;                 // the growth summary sends '9%' as text
+  const rows=labs.map(l=>[l,periods.map(p=>num(b[l][p])),{bold:M.bold.test(l),pct:M.pct.test(l)?1:0,d:M.d}]);
+  return `<h4 class="ftitle">${M.title} <small>${M.unit}</small></h4>`+fTable(periods.map(p=>iaCol(p).replace(/:$/,'')),rows)
+    +'<p class="note" style="margin:6px 2px 14px">Source: IndianAPI, in the same standard layout and rounding as Screener.in, downloaded '+esc((j.fetched||'').slice(0,10))+'. Not checked against the exchange filings.</p>';
+}
+function fillIA(id,sym,stat,sub){
+  loadIA(sym,stat).then(j=>{const el=document.getElementById(id);if(!el||!cur||cur.sym!==sym||fsub!==sub)return;
+    if(j){el.innerHTML=iaTable(j,stat);const sc=el.querySelector('.ftbl');if(sc)sc.scrollLeft=sc.scrollWidth}});
+}
 const FSUBS=[['about','About'],['quarters','Quarters'],['pl','Profit & Loss'],['yrs','10 Years'],['bs','Balance Sheet'],['cf','Cash Flow'],['ratios','Ratios'],['hold','Shareholding'],['docs','Documents']];
 const CO={};                                                       // symbol -> {data} | {p}
 function loadCompany(sym){
@@ -2494,13 +2513,15 @@ function fillFund(d){
     return;
   }
   if(fsub==='cf'){
-    const t=d.cf;if(!t){box.innerHTML='<div class="card"><p class="mut">No cash-flow statement is available from the free source for this stock.</p></div>';return}
-    box.innerHTML=`<h4 class="ftitle">Cash flow <small>₹ crore</small></h4>`+fTable(t.periods.map(monYr),t.rows.map(([l,v])=>[l,v,{bold:/^(Cash from operations|Free cash flow)/.test(l)}]))
-      +note('Source: Yahoo Finance annual cash-flow statements, last four to five years.');
+    const t=d.cf,sym=cur.sym;
+    const yh=t?`<h4 class="ftitle">Cash flow, more detail <small>₹ crore · last four to five years</small></h4>`+fTable(t.periods.map(monYr),t.rows.map(([l,v])=>[l,v,{bold:/^(Cash from operations|Free cash flow)/.test(l)}]))
+      +note('Source: Yahoo Finance annual cash-flow statements.'):'<div class="card"><p class="mut">No detailed cash-flow statement is available from Yahoo Finance for this stock.</p></div>';
+    box.innerHTML='<div id="iacf"></div>'+yh;fillIA('iacf',sym,'cashflow','cf');
     return;
   }
   if(fsub==='ratios'){
-    const pl=d.pl,bs=d.bs,cf=d.cf;if(!pl||!bs){box.innerHTML='<div class="card"><p class="mut">The annual statements needed to work out ratios are not available for this stock.</p></div>';return}
+    const pl=d.pl,bs=d.bs,cf=d.cf,symR=cur.sym;
+    if(!pl||!bs){box.innerHTML='<div id="iaratios"></div><div id="iagrowth"></div><div class="card"><p class="mut">The annual statements needed to work out ratios from Yahoo Finance are not available for this stock.</p></div>';fillIA('iaratios',symR,'ratios','ratios');fillIA('iagrowth',symR,'profit_loss_stats','ratios');return}
     const P=Object.fromEntries(pl.rows),Bs=Object.fromEntries(bs.rows),C=cf?Object.fromEntries(cf.rows):{};
     const idx=bs.periods.map(e=>pl.periods.indexOf(e));                    // balance-sheet years that also have a P&L
     const g=(src,lab,i)=>{const v=src[lab];return v?v[i]:null};
@@ -2520,21 +2541,24 @@ function fillFund(d){
       ['Asset turnover (×)',rng.map(j=>div(pj('Sales',j),g(Bs,'Total assets',j))),{eps:1}],
       ['Free cash flow / net profit',rng.map(j=>{const k=cf?cf.periods.indexOf(bs.periods[j]):-1;return k<0?null:div(g(C,'Free cash flow',k),pj('Net profit',j),100)}),{pct:1}]
     ].filter(r=>r[1].some(v=>v!=null));
-    box.innerHTML=`<h4 class="ftitle">Ratios <small>worked out from the annual statements</small></h4>`+fTable(bs.periods.map(monYr),rows)
+    queueMicrotask(()=>{fillIA('iaratios',symR,'ratios','ratios');fillIA('iagrowth',symR,'profit_loss_stats','ratios')});
+    box.innerHTML='<div id="iaratios"></div><div id="iagrowth"></div>'+`<h4 class="ftitle">Ratios, worked out here <small>from the Yahoo Finance annual statements</small></h4>`+fTable(bs.periods.map(monYr),rows)
       +note('Calculated on year-end figures from the Yahoo Finance statements, so they will differ a little from ratios that use averages. Debt is total borrowings including leases.');
     return;
   }
   if(fsub==='hold'){
     const H=d.holding||{history:[]},h=H.history;
-    if(!h.length){box.innerHTML='<div class="card"><p class="mut">No shareholding history has been loaded for this stock yet.</p></div>';return}
+    const symH=cur.sym,iaSlots='<div id="iash1"></div><div id="iash2"></div>';
+    queueMicrotask(()=>{fillIA('iash1',symH,'shareholding_pattern_quarterly','hold');fillIA('iash2',symH,'shareholding_pattern_yearly','hold')});
+    if(!h.length){box.innerHTML=iaSlots+'<div class="card"><p class="mut">No shareholding history from NSE has been loaded for this stock yet.</p></div>';return}
     const per=h.map(x=>monYr(x.q));
-    box.innerHTML=`<h4 class="ftitle">Shareholding pattern <small>% of shares</small></h4>`+fTable(per,[['Promoters',h.map(x=>x.promoter),{pct:1,bold:1}],['Public and others',h.map(x=>x.public),{pct:1}]])
+    box.innerHTML=iaSlots+`<h4 class="ftitle">Promoter and public holding, from NSE <small>% of shares</small></h4>`+fTable(per,[['Promoters',h.map(x=>x.promoter),{pct:1,bold:1}],['Public and others',h.map(x=>x.public),{pct:1}]])
       +`<div class="card"><div class="kvg">
       <div><span>Promoter pledge</span><b>${H.pledge?nf2.format(H.pledge.pct_of_promoter)+'% of promoter shares':'—'}</b></div>
       <div><span>Insider buys, 12 months</span><b>₹ ${nf2.format(H.insider_12m.bought)} Cr</b></div>
       <div><span>Insider sales, 12 months</span><b>₹ ${nf2.format(H.insider_12m.sold)} Cr</b></div>
       <div><span>Institutions (approx.)</span><b>${d.ratios.institutions_pct==null?'—':nf1.format(d.ratios.institutions_pct)+'%'}</b></div></div></div>`
-      +note('Promoter and public holding, pledge and insider trades are from NSE disclosures. Institutional holding is Yahoo Finance\'s estimate. A split into FII, DII and mutual funds is not available from the free sources.');
+      +note('Promoter and public holding, pledge and insider trades are from NSE disclosures. Institutional holding is Yahoo Finance\'s estimate. The FII and DII split above comes from IndianAPI.');
     return;
   }
   if(fsub==='docs'){

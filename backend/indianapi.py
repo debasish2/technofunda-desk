@@ -405,10 +405,15 @@ def fetch_all(con, sym):
     query = f["query"] or _search_name(f["name"] or sym)
     if used(con) >= monthly_limit():
         return "limit", "monthly call allowance used up"
-    code, body = _call(con, "/historical_stats", {"stock_name": query, "stats": "all"})
-    if code == 429:
-        return "limit", "HTTP 429"
-    if code != 200 or not isinstance(body, dict) or "info" in body or "error" in body or not body:
+    for q in dict.fromkeys([query, sym]):                       # the full legal name often finds nothing; the symbol usually does
+        code, body = _call(con, "/historical_stats", {"stock_name": q, "stats": "all"})
+        if code == 429:
+            return "limit", "HTTP 429"
+        if code == 200 and isinstance(body, dict) and body and "info" not in body and "error" not in body:
+            if q != query:
+                con.execute("UPDATE ia_fetch SET query=? WHERE sym=?", (q, sym))
+            break
+    else:
         return "no_data", str(body)[:60]
     now = datetime.now().isoformat(timespec="seconds")
     n = 0
@@ -441,10 +446,13 @@ def fetch_all_unasked(con, sym):
     common = [(month_end(l), v) for l, v in npr.items() if v is not None and month_end(l) in mine]
     good = [1 for qe, v in common if abs(v - mine[qe]) <= max(0.03 * abs(mine[qe]), 2.0)]
     if len(common) < 2 or len(good) < max(2, round(0.7 * len(common))):
-        con.execute("INSERT OR REPLACE INTO ia_fetch(sym,name,fetched,status,detail,query) VALUES(?,?,?,?,?,?)",
-                    (sym, name, datetime.now().isoformat(timespec="seconds"), "unconfirmed", f"net profit agrees in {len(good)} of {len(common)} common quarters", q))
-        con.commit()
-        return "unconfirmed", f"net profit agrees in {len(good)} of {len(common)} common quarters"
+        same, _isin = confirm(con, q, sym)                      # a lender's attributable profit can differ from Yahoo's: the NSE code settles whether it is the right company
+        if not same:
+            con.execute("INSERT OR REPLACE INTO ia_fetch(sym,name,fetched,status,detail,query) VALUES(?,?,?,?,?,?)",
+                        (sym, name, datetime.now().isoformat(timespec="seconds"), "unconfirmed", f"net profit agrees in {len(good)} of {len(common)} common quarters; NSE code did not match", q))
+            con.commit()
+            return "unconfirmed", f"net profit agrees in {len(good)} of {len(common)} common quarters; NSE code did not match"
+        good = common                                           # recorded below as confirmed by NSE code
     now = datetime.now().isoformat(timespec="seconds")
     con.execute("INSERT OR REPLACE INTO ia_fetch(sym,name,fetched,status,detail,np_scale,basis,query) VALUES(?,?,?,?,?,?,?,?)",
                 (sym, name, now, "stats_only", f"statements only; net profit agrees in {len(good)} of {len(common)} quarters", 1.0, None, q))
