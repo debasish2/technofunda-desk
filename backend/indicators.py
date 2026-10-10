@@ -257,6 +257,11 @@ def snapshot(data=None):
     snap = pd.DataFrame({
         "value30_cr": (C * V).rolling(30, min_periods=15).mean().iloc[t] / 1e7, "ema21": row(e21), "high20": h20, "low20": l20,
         "pullback20": (1 - last / h20) * 100, "rvol": rv.iloc[t], "rvol5": rv.iloc[t - 4:t + 1].max(), "listed_days": listed,
+        "ret_1w": (C.iloc[t] / C.iloc[t - 5] - 1) * 100, "ret_1m": (C.iloc[t] / C.iloc[t - 21] - 1) * 100, "ret_3m": (C.iloc[t] / C.iloc[t - 63] - 1) * 100,
+        "ret_6m": (C.iloc[t] / C.iloc[t - 126] - 1) * 100, "ret_1y": (C.iloc[t] / C.iloc[t - 252] - 1) * 100,
+        "ret_3y": (C.iloc[t] / C.iloc[t - 756] - 1) * 100 if t >= 756 else np.nan,
+        "low52_pct": (last / row(lo52) - 1) * 100, "hi52": row(hi52), "lo52": row(lo52),
+        "d50": (last / row(s50) - 1) * 100, "d200": (last / row(s200) - 1) * 100,
         "name": pd.Series(names), "last": last, "chg": (C.iloc[t] / C.iloc[t - 1] - 1) * 100,
         "value_cr": (C * V).rolling(20, min_periods=10).mean().iloc[t] / 1e7,       # avg daily traded value
         "ema20": row(e20), "ema50": row(e50), "ema200": row(e200),

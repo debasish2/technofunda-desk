@@ -854,7 +854,8 @@ def api_run(body: dict = Body(...)):
     in_desk = {r["sym"] for r in db.connect().execute("SELECT sym FROM stock WHERE desk=1")}
     cols = ["name", "last", "chg", "value_cr", "stage", "template", "supertrend", "sar", "rs", "rs1m", "rs3m", "rs6m",
             "rs12m", "vs500_55", "vs500_123", "mansfield", "momentum", "high52_pct", "consol_bars", "consol_range", "consol_breakout", "vcp_status", "vcp_n", "vcp_last", "vcp_dist",
-            "industry", "sector", "ind_3m", "ind_rank_3m", "mcap", "rsi14", "vs500_252", "pullback20", "rvol5", "listed_days", "value30_cr"]
+            "industry", "sector", "ind_3m", "ind_rank_3m", "mcap", "rsi14", "vs500_252", "pullback20", "rvol5", "listed_days", "value30_cr",
+            "ret_1w", "ret_1m", "ret_3m", "ret_6m", "ret_1y", "ret_3y", "low52_pct", "hi52", "lo52", "d50", "d200", "rs1m", "rs3m", "rs6m", "rs12m"]
     fcols = ["grade", "sales_yoy", "profit_yoy", "profit_state", "opm_ttm", "pe", "pb", "roce", "gnpa_pct", "nnpa_pct", "pledge_pct", "promo_chg", "insider_net", "latest_q", "is_fin", "checked", "profit_cagr3", "profit_cagr_fy", "de", "eps_rating"]
     rows = []
     for sym, r in hit.head(int(body.get("limit") or 300)).iterrows():
@@ -865,6 +866,43 @@ def api_run(body: dict = Body(...)):
         rows.append(d)
     return {"asof": str(snap["asof"].iloc[0]), "universe": int(len(snap)), "matched": int(len(hit)), "rows": rows,
             "fundamentals": {"used": fund_used, "covered": int((~ft["stale"]).sum())}, "funnel": funnel}
+
+
+@app.get("/api/screener/cols")
+def api_cols():
+    """Statement, valuation, holding and classification columns for every stock (the Screener's Growth, Profit/Loss, Balance Sheet... tabs)."""
+    from . import screencols
+    df = screencols.table(market_tables()["snap"])
+    cols = list(df.columns)
+    return {"cols": cols, "data": {sym: [clean(v) for v in row] for sym, row in zip(df.index, df.itertuples(index=False, name=None))}}
+
+
+@app.get("/api/screener/indexes")
+def api_index_list():
+    from . import feeds
+    return feeds.INDEXES
+
+
+@app.get("/api/screener/index")
+def api_index(name: str):
+    from . import feeds
+    if name not in feeds.INDEXES:
+        raise HTTPException(404, "unknown index")
+    return feeds.index_members(name)
+
+
+@app.get("/api/screener/results-due")
+def api_results_due():
+    """symbol -> date of the next board meeting for financial results, from the NSE event calendar."""
+    from . import feeds
+    c = feeds.calendar()
+    if not c.get("ok", True):
+        return c
+    out = {}
+    for r in c.get("rows", []):
+        if r.get("symbol") and "result" in (r.get("purpose") or "").lower() and r["symbol"] not in out:
+            out[r["symbol"]] = r["date"]
+    return {"ok": True, "due": out, "asof": c.get("asof")}
 
 
 @app.get("/api/screens")

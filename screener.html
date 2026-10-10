@@ -59,6 +59,42 @@ main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:36
 .chips button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
 .chips button:hover{border-color:var(--accent);color:var(--accent)}
 .chiprow[hidden]{display:none}
+.qbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.qf{position:relative}
+.qbtn{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer}
+.qbtn:hover,.qbtn[aria-expanded=true]{border-color:var(--accent)}
+.qbtn.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+.qbtn i{font-style:normal;font-size:11px;color:var(--muted)}
+.qbtn .qn{background:var(--accent);color:#fff;border-radius:999px;padding:0 7px;font-size:11.5px}
+.qpop{position:absolute;left:0;top:calc(100% + 6px);z-index:40;min-width:240px;max-width:min(360px,92vw);max-height:min(60vh,420px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 38px rgba(0,0,0,.25);padding:8px}
+.qpop[hidden]{display:none}
+.qpop input[type=search]{width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:0 10px;font:inherit;margin:0 0 6px;position:sticky;top:0}
+.qpop label{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:7px;cursor:pointer;font-size:14px}
+.qpop label:hover{background:var(--soft)}
+.qpop input[type=checkbox],.qpop input[type=radio]{accent-color:var(--accent);flex:none}
+.qpop .qx{display:block;width:100%;text-align:left;border:0;background:none;color:var(--accent);padding:7px 8px;font-size:13px;cursor:pointer}
+.qpop .none{padding:12px;color:var(--muted);font-size:13px;text-align:center}
+.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin:0 0 12px;scrollbar-width:thin}
+.tabs button{flex:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 14px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tools .pill{padding:7px 14px;font-size:13.5px}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 4px 0}
+.pager .pg{display:flex;gap:4px;flex-wrap:wrap}
+.pager .pg button{min-width:34px;height:34px;border:1px solid var(--line);background:var(--panel);border-radius:8px;color:var(--ink);cursor:pointer;padding:0 8px}
+.pager .pg button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.pager .pg button[aria-current=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.pager .pg button:disabled{opacity:.45;cursor:default}
+.pager select{height:34px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:0 8px}
+.av{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;color:#fff;font-size:11.5px;font-weight:700;flex:none;letter-spacing:.02em}
+.nmc{display:flex;align-items:center;gap:10px;min-width:0}
+.nmc a{display:block;min-width:0;color:var(--ink);text-decoration:none}
+.nmc b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:250px}
+.nmc small{display:block;color:var(--muted);font-size:11.5px;letter-spacing:.02em}
+.colpop .gh{font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:8px 0 2px}
+.colpop{max-height:min(70vh,520px);overflow:auto;min-width:240px}
+.colpop .qx{border:0;background:none;color:var(--accent);padding:8px 0 2px;cursor:pointer;font-size:13px}
 .scanbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
 .scanwrap{position:relative;max-width:100%}
 .scanbtn{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;max-width:100%}
@@ -106,7 +142,7 @@ main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:36
 .colpop{position:absolute;right:0;top:44px;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 34px rgba(16,24,40,.14);padding:10px 14px;min-width:210px}
 .colpop[hidden]{display:none}
 .colpop label{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer}
-.tablebox{overflow:auto;max-height:calc(100vh - 300px);min-height:240px;padding:0;border-radius:14px}
+.tablebox{overflow:auto;max-height:calc(100vh - 330px);min-height:240px;padding:0;border-radius:14px}
 .tablebox table{border-collapse:separate;border-spacing:0}
 .tablebox .sn{display:inline-block;min-width:2.4em;margin-right:4px;text-align:right;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
 .tablebox thead th{top:0;z-index:2;padding:12px 14px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
@@ -133,8 +169,8 @@ main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:36
   .out{padding:18px 14px 50px}
   .tablebox{max-height:none}
 }
-@media (max-width:600px){   /* the company name is the least useful column on a phone: dropping it brings price, change and RS next to the symbol */
-  .tablebox th:nth-child(2),.tablebox td:nth-child(2){display:none}
+@media (max-width:600px){
+  .nmc b{max-width:150px}.av{display:none}
   .tablebox td,.tablebox thead th{padding-left:10px;padding-right:10px}
   .tablebox td{height:42px}
 }
@@ -173,6 +209,8 @@ main.scr{max-width:none;margin:0;padding:0;display:grid;grid-template-columns:36
     <div class="scanbar"><div class="scanwrap" id="scanWrap"><button type="button" class="scanbtn" id="scanBtn" aria-expanded="false" aria-haspopup="true"><span class="mut">Scan</span><b id="scanName">Choose a scan</b><i>▾</i></button>
       <div class="scanpop" id="scanPop" hidden><input type="search" id="scanQ" placeholder="Find a scan…" aria-label="Find a scan" autocomplete="off"><div id="scanList"></div></div></div>
       <span class="note" id="scanNote"></span></div>
+    <div class="qbar" id="qbar"></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Column sets"></div>
     <div class="result" id="result"></div>
   </section>
 </main>
@@ -201,7 +239,7 @@ function build(){
   $('#filters').addEventListener('change',e=>{const k=e.target.dataset.on;if(k)e.target.closest('.f').classList.toggle('on',e.target.checked);
     else{const box=e.target.closest('.f');if(box){const cb=box.querySelector('[data-on]');if(!cb.checked){cb.checked=true;box.classList.add('on')}}}
     counts()});
-  $('#result').innerHTML=EMPTY;
+  $('#result').innerHTML='<div class="empty">Loading the market…</div>';
 }
 const EMPTY='<div class="empty">Pick a starting point, or tick filters on the left, then press <b>Run screen</b>.</div>';
 function counts(open){                                    // how many filters are on in each group; open the groups that have some
@@ -237,7 +275,7 @@ const PRESETS=[
  {name:'IPO scan: listed within a year',set:{listed_days:365,min_mcap:500,min_price:20}},
  {name:'Swing entry: near highs, tight, volume spike',set:{near_high:10,pullback20:8,rvol5:1.5,price_ma:'above_sma200',min_price:20,min_mcap:500}}];
 function applyPreset(set){
-  $('#clear').click();
+  clearFilters();
   for(const [id,v] of Object.entries(set)){
     const f=FIELDS.find(x=>x.id===id),box=document.querySelector(`.f[data-f="${id}"]`);if(!f||!box)continue;
     const cb=box.querySelector('[data-on]');cb.checked=true;box.classList.add('on');
@@ -248,42 +286,89 @@ function applyPreset(set){
   run();
 }
 const STAGE={1:'1 · Basing',2:'2 · Advancing',3:'3 · Topping',4:'4 · Declining'};
-const C={sym:['sym','# &nbsp;Symbol'],name:['name','Name'],last:['last','Price',v=>nf2.format(v)],chg:['chg','Chg%',v=>`<span class="${v>=0?'up':'down'}">${v>=0?'+':''}${nf2.format(v)}%</span>`],
- rs:['rs','RS',v=>nf0.format(v)],stage:['stage','Stage',v=>STAGE[v]||'–'],template:['template','Template',v=>nf0.format(v)+'/5'],
- supertrend:['supertrend','Supertrend',v=>v==null?'–':`<span class="tag ${v>0?'up':'down'}">${v>0?'Up':'Down'}</span>`],sar:['sar','SAR',v=>v==null?'–':`<span class="tag ${v>0?'up':'down'}">${v>0?'Up':'Down'}</span>`],
- mansfield:['mansfield','Mansfield',v=>nf1.format(v)+'%'],vs500_55:['vs500_55','vs N500 55d',v=>(v>=0?'+':'')+nf1.format(v)+'%'],momentum:['momentum','Momentum',v=>nf0.format(v)],
- consol_bars:['consol_bars','Base',v=>v?nf0.format(v)+' bars':'–'],consol_range:['consol_range','Box range',v=>nf1.format(v)+'%'],consol_breakout:['consol_breakout','Breakout',v=>v?'<span class="tag up">Yes</span>':'–'],
- vcp_status:['vcp_status','VCP',v=>v?`<span class="tag ${v==='breakout'?'up':''}">${esc(v)}</span>`:'–'],vcp_n:['vcp_n','Pullbacks',v=>nf0.format(v)],vcp_last:['vcp_last','Last pullback',v=>nf1.format(v)+'%'],
- industry:['industry','Industry',v=>v?esc(v):'–'],sector:['sector','Sector',v=>v?esc(v):'–'],ind_3m:['ind_3m','Ind. 3M',v=>(v>=0?'+':'')+nf1.format(v)+'%'],ind_rank_3m:['ind_rank_3m','Ind. rank',v=>'#'+nf0.format(v)],
- pullback20:['pullback20','Pullback 20d',v=>nf1.format(v)+'%'],rvol5:['rvol5','Vol spike',v=>nf1.format(v)+'x'],listed_days:['listed_days','Listed',v=>v==null?'–':nf0.format(v)+' d ago'],value30_cr:['value30_cr','30d traded ₹Cr',v=>nf1.format(v)],
- high52_pct:['high52_pct','From 52w high',v=>nf1.format(v)+'%'],mcap:['mcap','Mkt cap ₹Cr',v=>nf0.format(v)],rsi14:['rsi14','RSI 14',v=>nf0.format(v)],
- vs500_252:['vs500_252','vs N500 12m',v=>(v>=0?'+':'')+nf1.format(v)+'%'],value_cr:['value_cr','Traded ₹Cr',v=>nf0.format(v)]};
-const COLGROUPS={trend:['Trend & strength',['template','supertrend','sar','mansfield','vs500_55','vs500_252','rsi14','momentum','high52_pct','mcap']],
- patterns:['Base & VCP patterns',['consol_bars','consol_range','consol_breakout','vcp_status','vcp_n','vcp_last']],
- industry:['Industry detail',['sector','ind_3m']],swing:['Swing setup',['pullback20','rvol5','value30_cr','listed_days']],fund:['Quarterly results',null]};
-let colOn={trend:false,patterns:false,industry:false,swing:false,fund:true};
-try{Object.assign(colOn,JSON.parse(localStorage.getItem('setupdesk.scrcols')||'{}'))}catch(e){}
-const FCOLS=[['eps_rating','EPS rating',v=>nf0.format(v)],['grade','Result',v=>`<span class="tag ${GRADE[v]||''}">${esc(v)}</span>`],['sales_yoy','Sales YoY',v=>nf1.format(v)+'%'],
- ['profit_yoy','Profit YoY',v=>nf1.format(v)+'%'],['opm_ttm','OPM 12m',v=>nf1.format(v)+'%'],['pe','PE',v=>nf1.format(v)+'x'],['pb','P/B',v=>nf1.format(v)+'x'],['gnpa_pct','GNPA',v=>nf2.format(v)+'%'],['pledge_pct','Pledge',v=>nf1.format(v)+'%'],['insider_net','Insider ₹Cr',v=>(v>=0?'+':'')+nf2.format(v)],['roce','ROCE',v=>nf1.format(v)+'%'],['de','D/E',v=>nf2.format(v)+'x'],['profit_cagr3','Profit 3y CAGR',v=>nf1.format(v)+'%'],['profit_cagr_fy','Profit 3 FY CAGR',v=>nf1.format(v)+'%']];
-let fundUsed=false;
-function buildCols(){
-  const c=[C.sym,C.name,C.last,C.chg];
-  if(fundUsed&&colOn.fund)c.push(...FCOLS);
-  c.push(C.rs,C.stage,C.industry,C.ind_rank_3m);
-  for(const g of ['trend','patterns','industry','swing'])if(colOn[g])c.push(...COLGROUPS[g][1].map(k=>C[k]));
-  c.push(C.value_cr);return c;
+/* ---- the column registry: key -> [label, formatter]. Values come from the screen's rows and, for statements and valuation, from /api/screener/cols */
+const tg=v=>v==null?'–':`<span class="tag ${v>0?'up':'down'}">${v>0?'Up':'Down'}</span>`;
+const sg=d=>v=>`<span class="${v>=0?'up':'down'}">${v>=0?'+':''}${(d===2?nf2:d===1?nf1:nf0).format(v)}%</span>`;
+const P0=v=>nf0.format(v)+'%',P1=v=>nf1.format(v)+'%',P2=v=>nf2.format(v)+'%',X1=v=>nf1.format(v)+'x',N0=v=>nf0.format(v),N1=v=>nf1.format(v),N2=v=>nf2.format(v),TX=v=>v?esc(v):'–';
+const R={
+ mcap:['Market cap ₹Cr',N0],last:['Close ₹',N2],chg:['Chg 1D',sg(2)],industry:['Industry',TX],sector:['Sector',TX],cap_type:['Type',TX],board:['Exchange',TX],result_due:['Results on',v=>v?esc(v.split('-').reverse().join('-')):'–'],
+ value_cr:['Traded ₹Cr (20d)',N0],value30_cr:['Traded ₹Cr (30d)',N1],listed_days:['Listed',v=>nf0.format(v)+' d ago'],
+ pe:['P/E',X1],pb:['P/B',X1],ps:['Price / sales',X1],pfcf:['Price / FCF',X1],ev_ebitda:['EV / EBITDA',X1],earn_yield:['Earnings yield',P1],fcf_yield:['FCF yield',P1],payout:['Dividend payout',P0],roe:['ROE',P1],roce:['ROCE',P1],
+ ret_1w:['1 week',sg(1)],ret_1m:['1 month',sg(1)],ret_3m:['3 months',sg(1)],ret_6m:['6 months',sg(1)],ret_1y:['1 year',sg(1)],ret_3y:['3 years',sg(1)],
+ vs500_55:['vs N500 55d',sg(1)],vs500_123:['vs N500 6m',sg(1)],vs500_252:['vs N500 12m',sg(1)],
+ rsi14:['RSI 14',N0],d50:['vs 50 DMA',sg(1)],d200:['vs 200 DMA',sg(1)],high52_pct:['From 52w high',P1],low52_pct:['Above 52w low',sg(1)],hi52:['52w high ₹',N2],lo52:['52w low ₹',N2],
+ supertrend:['Supertrend',tg],sar:['SAR',tg],stage:['Stage',v=>STAGE[v]||'–'],template:['Template',v=>nf0.format(v)+'/5'],pullback20:['Pullback 20d',P1],rvol5:['Vol spike',X1],
+ consol_bars:['Base',v=>v?nf0.format(v)+' bars':'–'],consol_range:['Box range',P1],consol_breakout:['Breakout',v=>v?'<span class="tag up">Yes</span>':'–'],
+ vcp_status:['VCP',v=>v?`<span class="tag ${v==='breakout'?'up':''}">${esc(v)}</span>`:'–'],vcp_n:['Pullbacks',N0],vcp_last:['Last pullback',P1],
+ promoters:['Promoters',P2],promoters_chg:['Promoters Δ qtr',sg(2)],fiis:['FIIs',P2],fiis_chg:['FIIs Δ qtr',sg(2)],diis:['DIIs',P2],diis_chg:['DIIs Δ qtr',sg(2)],public:['Public',P2],govt:['Government',P2],holders:['Shareholders',N0],
+ pledge_pct:['Pledged',P1],insider_net:['Insider ₹Cr',v=>(v>=0?'+':'')+nf2.format(v)],
+ sales_yoy:['Sales YoY (qtr)',sg(1)],profit_yoy:['Profit YoY (qtr)',sg(1)],sales_g_fy:['Sales growth FY',sg(1)],op_g_fy:['Op. profit growth FY',sg(1)],np_g_fy:['Profit growth FY',sg(1)],eps_g_fy:['EPS growth FY',sg(1)],
+ sales_cagr_3y:['Sales CAGR 3y',sg(0)],sales_cagr_5y:['Sales CAGR 5y',sg(0)],sales_cagr_10y:['Sales CAGR 10y',sg(0)],sales_cagr_ttm:['Sales growth TTM',sg(0)],
+ profit_cagr_3y:['Profit CAGR 3y',sg(0)],profit_cagr_5y:['Profit CAGR 5y',sg(0)],profit_cagr_10y:['Profit CAGR 10y',sg(0)],profit_cagr_ttm:['Profit growth TTM',sg(0)],
+ profit_cagr3:['Profit 3y CAGR (ours)',sg(1)],profit_cagr_fy:['Profit 3 FY CAGR',sg(1)],price_cagr_1y:['Price CAGR 1y',sg(0)],price_cagr_3y:['Price CAGR 3y',sg(0)],price_cagr_5y:['Price CAGR 5y',sg(0)],price_cagr_10y:['Price CAGR 10y',sg(0)],
+ sales_ttm:['Sales ₹Cr (TTM)',N0],op_ttm:['Operating profit ₹Cr',N0],opm_ttm:['OPM',P0],oi_ttm:['Other income ₹Cr',N0],intr_ttm:['Interest ₹Cr',N0],dep_ttm:['Depreciation ₹Cr',N0],pbt_ttm:['PBT ₹Cr',N0],tax_pct:['Tax',P0],np_ttm:['Net profit ₹Cr',N0],eps_ttm:['EPS ₹ (TTM)',N2],sales_fy:['Sales ₹Cr (FY)',N0],np_fy:['Net profit ₹Cr (FY)',N0],eps_fy:['EPS ₹ (FY)',N2],
+ eq_cap:['Equity capital ₹Cr',N0],reserves:['Reserves ₹Cr',N0],networth:['Net worth ₹Cr',N0],borrow:['Borrowings ₹Cr',N0],oth_liab:['Other liabilities ₹Cr',N0],tot_liab:['Total liabilities ₹Cr',N0],fixed:['Fixed assets ₹Cr',N0],cwip:['CWIP ₹Cr',N0],invest:['Investments ₹Cr',N0],oth_assets:['Other assets ₹Cr',N0],tot_assets:['Total assets ₹Cr',N0],
+ cfo:['Operating cash flow ₹Cr',N0],cfi:['Investing cash flow ₹Cr',N0],cff:['Financing cash flow ₹Cr',N0],ncf:['Net cash flow ₹Cr',N0],fcf:['Free cash flow ₹Cr',N0],cfo_op:['CFO / operating profit',P0],
+ debtor_days:['Debtor days',N0],inv_days:['Inventory days',N0],pay_days:['Days payable',N0],ccc:['Cash conversion cycle',N0],wc_days:['Working capital days',N0],de:['Debt / equity',N2],int_cover:['Interest cover',X1],gnpa_pct:['GNPA',P2],
+ roe_avg_3y:['ROE 3y avg',P0],roe_avg_5y:['ROE 5y avg',P0],roe_avg_10y:['ROE 10y avg',P0],
+ rs:['RS rating',N0],rs1m:['RS 1m',N0],rs3m:['RS 3m',N0],rs6m:['RS 6m',N0],rs12m:['RS 12m',N0],eps_rating:['EPS rating',N0],grade:['Result',v=>`<span class="tag ${GRADE[v]||''}">${esc(v)}</span>`],mansfield:['Mansfield',P1],momentum:['Momentum',N0],ind_rank_3m:['Industry rank 3m',v=>'#'+nf0.format(v)],ind_3m:['Industry 3m',sg(1)]};
+const TABS=[
+ ['default','Default',['mcap','last','chg','industry','pe','ps','sales_ttm','np_ttm','opm_ttm','roce','rs','result_due']],
+ ['perf','Performance',['chg','ret_1w','ret_1m','ret_3m','ret_6m','ret_1y','ret_3y','vs500_55','vs500_123','vs500_252','price_cagr_3y','price_cagr_5y']],
+ ['tech','Technical',['last','rsi14','d50','d200','high52_pct','low52_pct','hi52','lo52','supertrend','sar','stage','template','pullback20','rvol5','consol_bars','consol_range','consol_breakout','vcp_status','vcp_n','vcp_last','listed_days','value_cr','value30_cr']],
+ ['val','Valuation',['mcap','pe','pb','ps','pfcf','ev_ebitda','earn_yield','fcf_yield','payout','roe','roce']],
+ ['hold','Holdings',['promoters','promoters_chg','fiis','fiis_chg','diis','diis_chg','public','govt','holders','pledge_pct','insider_net']],
+ ['growth','Growth',['sales_yoy','profit_yoy','sales_g_fy','np_g_fy','eps_g_fy','sales_cagr_3y','sales_cagr_5y','sales_cagr_10y','profit_cagr_3y','profit_cagr_5y','profit_cagr_10y','sales_cagr_ttm','profit_cagr_ttm','profit_cagr3','profit_cagr_fy','op_g_fy']],
+ ['pl','Profit/Loss',['sales_ttm','op_ttm','opm_ttm','oi_ttm','intr_ttm','dep_ttm','pbt_ttm','tax_pct','np_ttm','eps_ttm','sales_fy','np_fy','eps_fy']],
+ ['bs','Balance Sheet',['eq_cap','reserves','networth','borrow','oth_liab','tot_liab','fixed','cwip','invest','oth_assets','tot_assets']],
+ ['cf','Cash Flow',['cfo','cfi','cff','ncf','fcf','cfo_op']],
+ ['ratios','Ratios',['roce','roe','roe_avg_3y','roe_avg_5y','roe_avg_10y','debtor_days','inv_days','pay_days','ccc','wc_days','de','int_cover','gnpa_pct']],
+ ['scores','Scores',['rs','rs1m','rs3m','rs6m','rs12m','eps_rating','grade','template','stage','mansfield','momentum','ind_rank_3m','ind_3m']]];
+const TKEY='setupdesk.scrtab',CKEY='setupdesk.scrtabcols',PKEY='setupdesk.scrpage';
+let tab=(()=>{try{const t=localStorage.getItem(TKEY);return TABS.some(x=>x[0]===t)?t:'default'}catch(e){return 'default'}})();
+let tabCols={};try{tabCols=JSON.parse(localStorage.getItem(CKEY)||'{}')||{}}catch(e){}
+let PS=(()=>{try{const n=+localStorage.getItem(PKEY);return [25,50,100,200].includes(n)?n:50}catch(e){return 50}})(),page=1;
+let IA=null,IAP=null,DUE=null;
+const QF={ind:new Set(),board:new Set(),cap:new Set(),index:null,due:null,watch:null};
+const colKeys=()=>(tabCols[tab]||TABS.find(t=>t[0]===tab)[2]).filter(k=>R[k]);
+const watchList=()=>{try{return JSON.parse(localStorage.getItem('setupdesk.v1')||'{}').watch||[]}catch(e){return []}};
+IAP=fetch('/api/screener/cols').then(r=>r.ok?r.json():null).then(j=>{IA=j}).catch(()=>{});
+function mergeIA(){
+  if(!IA)return;
+  for(const r of rows){const a=IA.data[r.sym];if(!a)continue;IA.cols.forEach((c,i)=>{if(r[c]==null&&a[i]!=null)r[c]=a[i]})}
 }
-let cols=buildCols();
+function mergeDue(){if(DUE)for(const r of rows)r.result_due=DUE[r.sym]||null}
+function visible(){
+  const q=($('#q').value||'').trim().toLowerCase(),W=QF.watch?new Set(watchList()):null,td=new Date().toISOString().slice(0,10);
+  const lim=QF.due&&QF.due!=='any'?new Date(Date.now()+QF.due*864e5).toISOString().slice(0,10):null;
+  return rows.filter(x=>(!q||x.sym.toLowerCase().includes(q)||String(x.name||'').toLowerCase().includes(q))
+    &&(!QF.ind.size||QF.ind.has(x.industry))&&(!QF.board.size||QF.board.has(x.board))&&(!QF.cap.size||QF.cap.has(x.cap_type))
+    &&(!QF.index||QF.index.set.has(x.sym))&&(!W||(QF.watch==='in')===W.has(x.sym))
+    &&(!QF.due||(x.result_due&&x.result_due>=td&&(!lim||x.result_due<=lim))));
+}
+function sortNow(){const ks=['name',...colKeys()];return ks.includes(sort.k)?sort:{k:'mcap',d:-1}}
+function sorted(list){
+  const so=sortNow();
+  return list.sort((a,b)=>{const x=a[so.k],y=b[so.k];return (x==null)-(y==null)||(x>y?1:x<y?-1:0)*so.d});
+}
+const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
+const ini=n=>{const w=String(n).replace(/[^A-Za-z0-9 ]/g,'').trim().split(/\s+/);return ((w[0]||'?')[0]+(w.length>1?w[1][0]:(w[0]||'')[1]||'')).toUpperCase()};
 function draw(){
-  const q=($('#q').value||'').trim().toLowerCase();
-  const so=cols.some(c=>c[0]===sort.k)?sort:{k:'rs',d:-1};      // a sort column that is not shown (a hidden column group) falls back to RS
-  const r=rows.filter(x=>!q||x.sym.toLowerCase().includes(q)||String(x.name||'').toLowerCase().includes(q)).sort((a,b)=>{const x=a[so.k],y=b[so.k];return (x==null)-(y==null)||(x>y?1:x<y?-1:0)*so.d});
-  $('#result tbody').innerHTML=r.map((x,i)=>`<tr>${cols.map(([k,,fm])=>{const v=x[k];
-    if(k==='sym')return `<td class="sym"><span class="sn">${i+1}</span><a href="/?s=${encodeURIComponent(v)}" title="Open ${esc(v)} on the Desk" style="color:var(--ink);text-decoration:none"><b>${esc(v)}</b></a>${newSet.has(v)?' <span class="tag up" title="Matched today, not on the previous session">NEW</span>':''}${x.is_fin?' <span class="tag" title="Bank, lender or insurer: sales = net interest income (or revenue); no margin or ROCE">Fin</span>':''}</td>`;
+  const ks=colKeys(),so=sortNow(),all=sorted(visible()),n=all.length;
+  const pages=Math.max(1,Math.ceil(n/PS));page=Math.min(Math.max(1,page),pages);
+  const from=(page-1)*PS,list=all.slice(from,from+PS);
+  $('#result thead').innerHTML='<tr>'+[['name','Name'],...ks.map(k=>[k,R[k][0]])].map(([k,l])=>`<th data-k="${k}"${k==='name'?' style="text-align:left"':''}>${esc(l)}</th>`).join('')+'</tr>';
+  $('#result tbody').innerHTML=list.map((x,i)=>`<tr><td><div class="nmc"><span class="sn">${from+i+1}</span><span class="av" style="background:hsl(${hue(x.sym)} 48% 42%)">${esc(ini(x.name||x.sym))}</span><a href="/?s=${encodeURIComponent(x.sym)}" title="Open ${esc(x.sym)} on the Desk"><b>${esc(x.name||x.sym)}</b><small>${esc(x.sym)}${newSet.has(x.sym)?' <span class="tag up" title="Matched today, not on the previous session">NEW</span>':''}${x.is_fin?' <span class="tag" title="Bank, lender or insurer: sales = net interest income (or revenue); no margin or ROCE">Fin</span>':''}</small></a></div></td>${ks.map(k=>{const v=x[k],f=R[k][1];
     if(k==='profit_yoy'&&v==null&&x.grade)return `<td class="mut">${x.profit_state==='loss_to_profit'?'Loss → profit':'Loss'}</td>`;
-    if(k==='grade'&&v!=null)return `<td>${fm(v)}${x.checked==='u'?' <sup title="Yahoo Finance figure: no company filing has confirmed this quarter yet" style="color:var(--amber);cursor:help;font-weight:600">†</sup>':''}</td>`;
-    if(k==='name')return `<td class="mut">${esc(v)}</td>`;if(k==='industry')return `<td class="ind mut" title="${esc(v)}">${v==null?'–':esc(v)}</td>`;return `<td>${v==null?'–':fm(v)}</td>`}).join('')}</tr>`).join('');
+    if(k==='industry')return `<td class="ind mut" title="${esc(v)}">${v==null?'–':esc(v)}</td>`;
+    if(k==='grade'&&v!=null)return `<td>${f(v)}${x.checked==='u'?' <sup title="Yahoo Finance figure: no company filing has confirmed this quarter yet" style="color:var(--amber);cursor:help;font-weight:600">†</sup>':''}</td>`;
+    return `<td>${v==null?'–':f(v)}</td>`}).join('')}</tr>`).join('')||`<tr><td colspan="${ks.length+1}" class="mut" style="padding:28px;text-align:center">No stock matches.</td></tr>`;
   document.querySelectorAll('#result thead th').forEach(th=>{th.removeAttribute('aria-sort');if(th.dataset.k===so.k)th.setAttribute('aria-sort',so.d>0?'ascending':'descending')});
+  const cnt=$('#cnt');if(cnt)cnt.innerHTML=n?`Showing <b>${nf0.format(from+1)}–${nf0.format(from+list.length)}</b> of <b>${nf0.format(n)}</b> results`+(n<rows.length?` <span class="mut">(${nf0.format(rows.length)} match the screen)</span>`:''):'No results';
+  const near=[...new Set([1,2,pages-1,pages,page-1,page,page+1])].filter(x=>x>=1&&x<=pages).sort((a,b)=>a-b);
+  let pg='',prev=0;for(const x of near){if(x-prev>1)pg+='<button disabled>…</button>';pg+=`<button data-pg="${x}"${x===page?' aria-current="true"':''}>${x}</button>`;prev=x}
+  $('#pager').innerHTML=pages>1||n>25?`<span class="mut">Rows per page <select id="ps">${[25,50,100,200].map(v=>`<option${v===PS?' selected':''}>${v}</option>`).join('')}</select></span><div class="pg"><button data-pg="${page-1}"${page<2?' disabled':''} aria-label="Previous page">‹</button>${pg}<button data-pg="${page+1}"${page>=pages?' disabled':''} aria-label="Next page">›</button></div>`:'';
+  renderQ();
 }
 /* the filters you ticked are kept, and come back the next time the page opens */
 const FKEY='setupdesk.scrfilters';
@@ -291,17 +376,16 @@ function saveFilters(){try{localStorage.setItem(FKEY,JSON.stringify({filters:col
 async function run(){
   saveFilters();
   newSet=pendingNew||new Set();pendingNew=null;
-  const filters=collect();if(!Object.keys(filters).length&&!Number($('#minval').value)){$('#result').innerHTML=EMPTY}$('#run').disabled=true;$('#run').textContent='Running…';
+  const filters=collect();$('#run').disabled=true;$('#run').textContent='Running…';
   try{
-    const res=await fetch('/api/screener/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters,min_value_cr:Number($('#minval').value)||0,limit:1000})});
+    const res=await fetch('/api/screener/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters,min_value_cr:Number($('#minval').value)||0,limit:5000})});
     if(!res.ok)throw new Error((await res.json()).detail||res.status);
-    const d=await res.json();rows=d.rows;
+    const d=await res.json();rows=d.rows;await IAP;mergeIA();mergeDue();page=1;
     // the Desk's "Screener" list is whatever the last run returned
-    try{localStorage.setItem('setupdesk.screen',JSON.stringify({syms:d.rows.map(r=>r.sym),n:d.matched,at:new Date().toISOString()}))}catch(e){}fundUsed=!!d.fundamentals.used;cols=buildCols();
-    const fun=d.funnel.map((st,i,a)=>`<span class="st${i===a.length-1?' last':''}"><b>${nf0.format(st.n)}</b> <span class="mut">${esc(st.label)}</span></span>`).join('<span class="ar">→</span>');
-    $('#result').innerHTML=`<div class="funnel">${fun}</div><div class="head"><div><b>${nf0.format(d.matched)}</b> of ${nf0.format(d.fundamentals.used?d.fundamentals.covered:d.universe)} stocks match${d.matched>d.rows.length?` · showing the top ${d.rows.length} by RS`:''}</div><div class="r"><span class="note">Prices as of ${esc(d.asof)}.${d.rows.some(r=>r.checked==='u')?' <span style="color:var(--amber);font-weight:600">†</span> Yahoo figure, no filing has confirmed that quarter yet.':''}</span><div class="colmenu"><button class="pill" id="colBtn">Columns ▾</button><div class="colpop" id="colPop" hidden>${Object.entries(COLGROUPS).filter(([k])=>k!=='fund'||fundUsed).map(([k,[l]])=>`<label><input type="checkbox" data-cg="${k}"${colOn[k]?' checked':''}>${esc(l)}</label>`).join('')}</div></div>${d.rows.length?`<a class="go" href="/?list=screener" style="text-decoration:none">Open these ${nf0.format(d.rows.length)} on the Desk →</a>`:''}</div></div>
-      <div class="card tablebox"><table><thead><tr>${cols.map(([k,l])=>`<th data-k="${k}">${l}</th>`).join('')}</tr></thead><tbody></tbody></table></div>`;
-    document.querySelector('#result thead').onclick=e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;sort={k,d:sort.k===k?-sort.d:(k==='sym'||k==='name'?1:-1)};try{localStorage.setItem('setupdesk.scrsort',JSON.stringify(sort))}catch(_){}draw()};
+    try{localStorage.setItem('setupdesk.screen',JSON.stringify({syms:d.rows.map(r=>r.sym),n:d.matched,at:new Date().toISOString()}))}catch(e){}
+    const fun=d.funnel.length>1?`<div class="funnel">${d.funnel.map((st,i,a)=>`<span class="st${i===a.length-1?' last':''}"><b>${nf0.format(st.n)}</b> <span class="mut">${esc(st.label)}</span></span>`).join('<span class="ar">→</span>')}</div>`:'';
+    $('#result').innerHTML=`${fun}<div class="head"><div id="cnt"></div><div class="r tools"><span class="note">Prices as of ${esc(d.asof)}.${d.rows.some(r=>r.checked==='u')?' <span style="color:var(--amber);font-weight:600">†</span> Yahoo figure, no filing has confirmed that quarter yet.':''}</span>${d.rows.length?`<a class="pill" href="/?list=screener" style="text-decoration:none" title="Open the stocks of this screen on the Desk">Open on Desk →</a>`:''}<div class="colmenu"><button class="pill" id="colBtn" aria-expanded="false">✎ Edit columns</button><div class="colpop" id="colPop" hidden></div></div><button class="pill" id="dl" title="Download the table as a CSV file">⤓ Download</button></div></div>
+      <div class="card tablebox"><table><thead></thead><tbody></tbody></table></div><div class="pager" id="pager"></div>`;
     draw();
   }catch(e){$('#result').innerHTML=`<div class="warn">Could not run the screen: ${esc(e.message)}</div>`}
   $('#run').disabled=false;$('#run').textContent='Run screen';
@@ -312,14 +396,84 @@ $('#ftog').onclick=()=>setFilters(document.querySelector('.side').classList.cont
 if(narrow())setFilters(false);
 $('#run').addEventListener('click',()=>{if(narrow()){setFilters(false);setTimeout(()=>$('.out').scrollIntoView({behavior:'smooth'}),50)}});
 $('#run').onclick=run;
-$('#q').oninput=()=>{if(rows.length&&$('#result tbody'))draw()};
-$('#result').addEventListener('click',e=>{
-  if(e.target.closest('#colBtn')){const p=$('#colPop');p.hidden=!p.hidden;return}
-  const cb=e.target.closest('[data-cg]');
-  if(cb){colOn[cb.dataset.cg]=cb.checked;try{localStorage.setItem('setupdesk.scrcols',JSON.stringify(colOn))}catch(_){}
-    cols=buildCols();const tb=$('#result thead');tb.innerHTML='<tr>'+cols.map(([k,l])=>`<th data-k="${k}">${l}</th>`).join('')+'</tr>';draw()}
+$('#q').oninput=()=>{if(rows.length&&$('#result tbody')){page=1;draw()}};
+/* tabs */
+function renderTabs(){
+  $('#tabs').innerHTML=TABS.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${k===tab}">${esc(l)}</button>`).join('');
+}
+$('#tabs').onclick=e=>{const b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;try{localStorage.setItem(TKEY,tab)}catch(_){}renderTabs();page=1;if($('#result tbody'))draw()};
+/* quick filters above the table */
+const BOARDS=['NSE main board','NSE SME','InvIT / REIT'],CAPS=['Large cap','Mid cap','Small cap','Micro cap'];
+let INDEXES=null,qOpen=null,qSearch='';
+const QDEF=[
+ {id:'ind',label:'Industry',multi:true,search:true,opts:()=>[...new Set(rows.map(r=>r.industry).filter(Boolean))].sort().map(v=>[v,v])},
+ {id:'index',label:'Index',multi:false,search:true,opts:()=>(INDEXES||[]).map(v=>[v,v])},
+ {id:'due',label:'Announcement',multi:false,opts:()=>[['7','Results due in 7 days'],['30','Results due in 30 days'],['any','Any upcoming results date']]},
+ {id:'board',label:'Exchange',multi:true,opts:()=>BOARDS.map(v=>[v,v])},
+ {id:'cap',label:'Type',multi:true,opts:()=>CAPS.map(v=>[v,v])},
+ {id:'watch',label:'Watchlist',multi:false,opts:()=>[['in','In my watchlist'],['out','Not in my watchlist']]}];
+fetch('/api/screener/indexes').then(r=>r.json()).then(j=>{INDEXES=j;renderQ()}).catch(()=>{});
+function qState(id){const v=QF[id];return v instanceof Set?[...v]:v==null?[]:id==='index'?[v.name]:[String(v)]}
+function renderQ(){
+  const keep=qOpen&&document.querySelector('#qbar .qpop:not([hidden]) input[type=search]');const hadFocus=keep&&document.activeElement===keep;
+  $('#qbar').innerHTML=QDEF.map(d=>{
+    const act=qState(d.id),opts=d.opts(),q=qSearch.toLowerCase(),shown=opts.filter(([v,l])=>!d.search||!q||l.toLowerCase().includes(q));
+    const one=act.length===1?(opts.find(o=>o[0]===act[0])||[0,act[0]])[1]:d.label;
+    return `<div class="qf" data-q="${d.id}"><button type="button" class="qbtn${act.length?' on':''}" aria-expanded="${qOpen===d.id}" aria-haspopup="true">${esc(one)}${act.length>1?` <span class="qn">${act.length}</span>`:''} <i>▾</i></button>
+      <div class="qpop"${qOpen===d.id?'':' hidden'}>${d.search?`<input type="search" placeholder="Find ${esc(d.label.toLowerCase())}…" value="${esc(qSearch)}" autocomplete="off" aria-label="Find ${esc(d.label.toLowerCase())}">`:''}${
+        shown.map(([v,l])=>`<label><input type="${d.multi?'checkbox':'radio'}" name="q_${d.id}" value="${esc(v)}"${act.includes(v)?' checked':''}>${esc(l)}</label>`).join('')||`<div class="none">${opts.length?'Nothing matches.':d.id==='index'?'Loading…':'Run a screen first.'}</div>`}${act.length?`<button type="button" class="qx" data-clear="${d.id}">Clear ${esc(d.label.toLowerCase())}</button>`:''}</div></div>`}).join('');
+  if(hadFocus){const i=document.querySelector('#qbar .qpop:not([hidden]) input[type=search]');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}
+}
+const refresh=()=>{page=1;if($('#result tbody'))draw();else renderQ()};
+async function setQ(id,v,on){
+  if(id==='ind'||id==='board'||id==='cap'){on?QF[id].add(v):QF[id].delete(v)}
+  else if(id==='watch')QF.watch=v;
+  else if(id==='due'){QF.due=v==='any'?'any':+v;if(!DUE){try{const j=await (await fetch('/api/screener/results-due')).json();if(j.ok){DUE=j.due;mergeDue()}else{QF.due=null;alert(j.why||'The results calendar is not available right now.')}}catch(e){QF.due=null}}}
+  else if(id==='index'){
+    try{const j=await (await fetch('/api/screener/index?name='+encodeURIComponent(v))).json();if(j.ok===false||!j.syms)throw new Error(j.why||'no answer');QF.index={name:v,set:new Set(j.syms)}}
+    catch(e){alert('Could not load the members of '+v+' from NSE. Try again in a moment.');QF.index=null}
+  }
+  refresh();
+}
+$('#qbar').addEventListener('click',e=>{
+  const c=e.target.closest('[data-clear]');
+  if(c){const id=c.dataset.clear;if(QF[id] instanceof Set)QF[id].clear();else QF[id]=null;refresh();return}
+  const b=e.target.closest('.qbtn');
+  if(b){const id=b.closest('.qf').dataset.q;qOpen=qOpen===id?null:id;qSearch='';renderQ();const i=document.querySelector('#qbar .qpop:not([hidden]) input[type=search]');if(i)i.focus()}
 });
-document.addEventListener('click',e=>{const p=$('#colPop');if(p&&!p.hidden&&!e.target.closest('.colmenu'))p.hidden=true});
+$('#qbar').addEventListener('change',e=>{const i=e.target.closest('input[name^="q_"]');if(!i)return;setQ(i.name.slice(2),i.value,i.checked)});
+$('#qbar').addEventListener('input',e=>{if(e.target.type==='search'){qSearch=e.target.value;renderQ()}});
+document.addEventListener('click',e=>{if(qOpen&&!e.target.closest('#qbar')){qOpen=null;renderQ()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&qOpen){qOpen=null;renderQ()}});
+/* table: sort, pages, edit columns, download */
+function csv(){
+  const ks=colKeys(),all=sorted(visible()),q=v=>v==null?'':/[",\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':String(v);
+  const head=['Symbol','Name',...ks.map(k=>R[k][0])];
+  const body=all.map(x=>[x.sym,x.name,...ks.map(k=>{const v=x[k];return typeof v==='number'?Math.round(v*1e4)/1e4:v})].map(q).join(','));
+  const blob=new Blob(['﻿'+[head.map(q).join(','),...body].join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=`screener-${tab}-${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+}
+function colPop(){
+  const on=new Set(colKeys()),seen=new Set();let h='';
+  for(const [,l,keys] of TABS){const ks=keys.filter(k=>R[k]&&!seen.has(k));ks.forEach(k=>seen.add(k));if(!ks.length)continue;
+    h+=`<div class="gh">${esc(l)}</div>`+ks.map(k=>`<label><input type="checkbox" data-col="${k}"${on.has(k)?' checked':''}>${esc(R[k][0])}</label>`).join('')}
+  return h+`<button type="button" class="qx" id="colReset">Reset this tab</button>`;
+}
+$('#result').addEventListener('click',e=>{
+  if(e.target.closest('#colBtn')){const p=$('#colPop');p.hidden=!p.hidden;$('#colBtn').setAttribute('aria-expanded',String(!p.hidden));if(!p.hidden)p.innerHTML=colPop();return}
+  if(e.target.closest('#dl')){csv();return}
+  if(e.target.closest('#colReset')){delete tabCols[tab];try{localStorage.setItem(CKEY,JSON.stringify(tabCols))}catch(_){}$('#colPop').innerHTML=colPop();draw();return}
+  const pg=e.target.closest('[data-pg]');if(pg&&!pg.disabled){page=+pg.dataset.pg;draw();document.querySelector('.tablebox').scrollTop=0;return}
+  const th=e.target.closest('thead th');
+  if(th){const k=th.dataset.k;sort={k,d:sort.k===k?-sort.d:(k==='name'||k==='industry'?1:-1)};try{localStorage.setItem('setupdesk.scrsort',JSON.stringify(sort))}catch(_){}page=1;draw()}
+});
+$('#result').addEventListener('change',e=>{
+  const cb=e.target.closest('[data-col]');
+  if(cb){const cur=colKeys(),k=cb.dataset.col;tabCols[tab]=cb.checked?[...cur,k]:cur.filter(x=>x!==k);try{localStorage.setItem(CKEY,JSON.stringify(tabCols))}catch(_){}draw();return}
+  if(e.target.id==='ps'){PS=+e.target.value;try{localStorage.setItem(PKEY,String(PS))}catch(_){}page=1;draw()}
+});
+document.addEventListener('click',e=>{const p=$('#colPop');if(p&&!p.hidden&&!e.target.closest('.colmenu')){p.hidden=true;const b=$('#colBtn');if(b)b.setAttribute('aria-expanded','false')}});
+renderTabs();renderQ();
 /* saved screens: keep a set of filters under a name; the nightly run records who matched, so each chip shows what is new */
 const PGROUP={'Growth and quality':['Strong results in an uptrend','Early turnarounds, price confirming','Quality at a fair price, trending','Accelerating earnings + RS leaders'],
   'Bases and breakouts':['Tight bases in leaders','VCP setups in leaders','Fresh breakouts from a base'],
@@ -382,7 +536,8 @@ $('#save').onclick=async()=>{
   if(!r.ok){alert('Could not save: '+((await r.json()).detail||r.status));return}
   loadSaved();
 };
-$('#clear').onclick=()=>{try{localStorage.removeItem(FKEY)}catch(e){}document.querySelectorAll('#filters [data-on]').forEach(c=>{c.checked=false;c.closest('.f').classList.remove('on')});document.querySelectorAll('#filters [data-k]').forEach(i=>{if(i.tagName==='INPUT')i.value='';else if(i.querySelector('option[value=""]'))i.value=''});$('#result').innerHTML=EMPTY;counts()};
+function clearFilters(){try{localStorage.removeItem(FKEY)}catch(e){}document.querySelectorAll('#filters [data-on]').forEach(c=>{c.checked=false;c.closest('.f').classList.remove('on')});document.querySelectorAll('#filters [data-k]').forEach(i=>{if(i.tagName==='INPUT')i.value='';else if(i.querySelector('option[value=""]'))i.value=''});counts()}
+$('#clear').onclick=()=>{clearFilters();LAST='';PACT='';try{localStorage.removeItem('setupdesk.scrlast');localStorage.removeItem('setupdesk.scrpreset')}catch(_){}renderScans();run()};
 (async()=>{
   FIELDS=await (await fetch('/api/screener/fields')).json();build();
   loadSaved();
@@ -390,7 +545,7 @@ $('#clear').onclick=()=>{try{localStorage.removeItem(FKEY)}catch(e){}document.qu
   {const pi=new URLSearchParams(location.search).get('preset');
    if(pi!=null&&PRESETS[+pi]){PACT=PRESETS[+pi].name;LAST='';applyPreset(PRESETS[+pi].set);renderScans()}
    else{try{const o=JSON.parse(localStorage.getItem(FKEY)||'null');
-     if(o&&(Object.keys(o.filters||{}).length||o.minval)){if(Number.isFinite(o.minval))$('#minval').value=o.minval;if(Object.keys(o.filters||{}).length)applyPreset(o.filters);else run()}}catch(e){}}}
+     if(o&&(Object.keys(o.filters||{}).length||o.minval)){if(Number.isFinite(o.minval))$('#minval').value=o.minval;if(Object.keys(o.filters||{}).length)applyPreset(o.filters);else run()}else run()}catch(e){run()}}}
   try{const c=await (await fetch('/api/screener/coverage')).json();
     document.querySelector('.f[data-f="grade"]').closest('.group').querySelector('summary').insertAdjacentHTML('afterend',`<p class="note">Quarterly results are checked for <b>${c.fundamentals}</b> of ${nf0.format(c.technical)} stocks, so turning on any filter below limits the search to those ${c.fundamentals}. ${c.stale?`${c.stale} more have only older results and are left out.`:''}</p>`)}catch(e){}
   try{const b=await (await fetch('/api/breadth')).json();$('#sub').textContent=`Every NSE stock · data to ${b.dates[b.dates.length-1]}`}catch(e){$('#sub').textContent='Price-based filters across every NSE stock'}

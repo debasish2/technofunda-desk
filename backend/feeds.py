@@ -29,7 +29,7 @@ import requests
 warnings.filterwarnings("ignore")
 DB = Path(__file__).resolve().parent.parent / "data" / "feeds.db"
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36"}
-TTL = {"analysts": 12 * 3600, "news": 30 * 60, "actions": 6 * 3600, "ipos": 3600, "calendar": 3 * 3600}
+TTL = {"analysts": 12 * 3600, "news": 30 * 60, "actions": 6 * 3600, "ipos": 3600, "calendar": 3 * 3600, "index": 24 * 3600}
 _nse = {"s": None, "t": 0}
 
 
@@ -263,6 +263,28 @@ def calendar(refresh=False):
         rows.sort(key=lambda r: (r["date"], r["symbol"] or ""))
         return {"ok": True, "rows": rows, "asof": datetime.now().isoformat(timespec="minutes")}
     return cached("calendar", "all", build, refresh)
+
+
+INDEX_FILES = {"NIFTY 50": "ind_nifty50list", "NIFTY NEXT 50": "ind_niftynext50list", "NIFTY 100": "ind_nifty100list", "NIFTY 200": "ind_nifty200list",
+               "NIFTY 500": "ind_nifty500list", "NIFTY MIDCAP 100": "ind_niftymidcap100list", "NIFTY SMALLCAP 100": "ind_niftysmallcap100list",
+               "NIFTY MICROCAP 250": "ind_niftymicrocap250_list", "NIFTY BANK": "ind_niftybanklist", "NIFTY IT": "ind_niftyitlist", "NIFTY AUTO": "ind_niftyautolist",
+               "NIFTY PHARMA": "ind_niftypharmalist", "NIFTY FMCG": "ind_niftyfmcglist", "NIFTY METAL": "ind_niftymetallist", "NIFTY REALTY": "ind_niftyrealtylist",
+               "NIFTY ENERGY": "ind_niftyenergylist", "NIFTY FINANCIAL SERVICES": "ind_niftyfinancelist"}
+INDEXES = list(INDEX_FILES)
+
+
+def index_members(name, refresh=False):
+    """The symbols in one NSE index, from the constituent list NSE publishes (kept a day)."""
+    def build():
+        import csv
+        import io
+        r = requests.get(f"https://nsearchives.nseindia.com/content/indices/{INDEX_FILES[name]}.csv", headers=UA, timeout=30)
+        r.raise_for_status()
+        syms = [row["Symbol"].strip() for row in csv.DictReader(io.StringIO(r.text)) if row.get("Symbol")]
+        if not syms:
+            raise ValueError("empty")
+        return {"ok": True, "syms": syms}
+    return cached("index", name, build, refresh)
 
 
 if __name__ == "__main__":
