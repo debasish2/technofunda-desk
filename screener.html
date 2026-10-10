@@ -48,26 +48,29 @@ main.scr{max-width:none;margin:0;padding:0;display:block}
 .go:hover{filter:brightness(1.08)}.go:disabled{opacity:.6}
 .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 16px;color:var(--ink)}
 .pill:hover{border-color:var(--accent);color:var(--accent)}
-.out{padding:26px 32px 60px;min-width:0}
-.outhd{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 18px}
-.out h1{font-size:24px;font-weight:600;margin:0 0 2px;letter-spacing:-.01em}
-.out .sub{margin:0}
+.out{padding:14px 24px 40px;min-width:0}
+.outhd{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 10px}
+.out h1{font-size:20px;font-weight:600;margin:0;letter-spacing:-.01em}
+.out .sub{margin:0;font-size:13px}
+.outhd>div:first-child{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+#warn:empty{display:none}
+#warn .warn{margin:0 0 10px;padding:6px 12px;font-size:13px}
 .outhd>div:first-child{flex:1 1 300px}
 .tablebox td.ind,.tablebox th[data-k=industry]{text-align:left}
 .search{position:relative;flex:0 1 340px;min-width:220px}
-.search input{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:0 12px 0 36px}
-.search svg{position:absolute;left:12px;top:12px;color:var(--muted)}
+.search input{width:100%;height:36px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:0 12px 0 36px}
+.search svg{position:absolute;left:12px;top:10px;color:var(--muted)}
 .chiprow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
 .chiprow>.mut{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;min-width:92px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chips button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
 .chips button:hover{border-color:var(--accent);color:var(--accent)}
 .chiprow[hidden]{display:none}
-.qbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.qbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 4px}
 .grow{flex:1}
-.crit{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.crit{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1 1 320px;min-width:0}
 .crit>.mut{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-right:2px}
-.chip{display:inline-flex;align-items:center;gap:6px;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 6px 5px 11px;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:3px 4px 3px 10px;font-size:13px}
 .chip button{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;padding:0 4px}
 .chip button:hover{color:var(--down)}
 .lnk{border:0;background:none;color:var(--accent);cursor:pointer;margin-left:auto;font-size:14px}
@@ -92,7 +95,7 @@ main.scr{max-width:none;margin:0;padding:0;display:block}
 .cb.down{color:var(--down);background:color-mix(in srgb,var(--down) 12%,var(--panel))}
 @media (max-width:760px){.cgrid{grid-template-columns:minmax(0,1fr)!important}.crit .lnk{margin-left:0}}
 .qf{position:relative}
-.qbtn{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer}
+.qbtn{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:14px;color:var(--ink);cursor:pointer}
 .qbtn:hover,.qbtn[aria-expanded=true]{border-color:var(--accent)}
 .qbtn.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
 .qbtn i{font-style:normal;font-size:11px;color:var(--muted)}
@@ -105,13 +108,13 @@ main.scr{max-width:none;margin:0;padding:0;display:block}
 .qpop input[type=checkbox],.qpop input[type=radio]{accent-color:var(--accent);flex:none}
 .qpop .qx{display:block;width:100%;text-align:left;border:0;background:none;color:var(--accent);padding:7px 8px;font-size:13px;cursor:pointer}
 .qpop .none{padding:12px;color:var(--muted);font-size:13px;text-align:center}
-.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin:0 0 12px;scrollbar-width:thin}
-.tabs button{flex:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 14px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin:0 0 10px;scrollbar-width:none}
+.tabs button{flex:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 12px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tabs button:hover{color:var(--ink)}
 .tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
 .tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.tools .pill{padding:7px 14px;font-size:13.5px}
-.pager{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 4px 0}
+.tools .pill{padding:5px 12px;font-size:13px}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 4px 0}
 .pager .pg{display:flex;gap:4px;flex-wrap:wrap}
 .pager .pg button{min-width:34px;height:34px;border:1px solid var(--line);background:var(--panel);border-radius:8px;color:var(--ink);cursor:pointer;padding:0 8px}
 .pager .pg button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
@@ -126,12 +129,13 @@ main.scr{max-width:none;margin:0;padding:0;display:block}
 .colpop .gh{font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:8px 0 2px}
 .colpop{max-height:min(70vh,520px);overflow:auto;min-width:240px}
 .colpop .qx{border:0;background:none;color:var(--accent);padding:8px 0 2px;cursor:pointer;font-size:13px}
-.scanbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+.scanbar{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;margin:0 0 10px}
 .scanwrap{position:relative;max-width:100%}
-.scanbtn{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer;max-width:100%}
+.scanbtn{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:14px;color:var(--ink);cursor:pointer;max-width:100%}
 .scanbtn:hover,.scanbtn[aria-expanded=true]{border-color:var(--accent)}
 .scanbtn .mut{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
-.scanbtn b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46ch}
+.scanbtn b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34ch}
+.scanbtn .qn{background:var(--accent);color:#fff;border-radius:999px;padding:0 7px;font-size:11.5px}
 .scanpop{position:absolute;left:0;top:calc(100% + 6px);z-index:40;width:min(560px,94vw);max-height:min(72vh,640px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 38px rgba(0,0,0,.25);padding:10px}
 .scanpop[hidden]{display:none}
 .scanpop input[type=search]{width:100%;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink);padding:0 12px;font:inherit;margin:0 0 6px;position:sticky;top:0}
@@ -159,12 +163,13 @@ main.scr{max-width:none;margin:0;padding:0;display:block}
 .sv.act{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}
 .sv .x{padding:6px 10px;color:var(--muted);border-left:1px solid var(--line)}
 .empty{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:44px 24px;text-align:center;color:var(--muted);margin-top:14px}
-.funnel{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:18px 0 14px}
-.funnel .st{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 13px}
-.funnel .st b{font-size:14px}
+.funnel{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0}
+.funnel .st{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:13px}
+.funnel .st b{font-size:13px}
 .funnel .st.last{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
 .funnel .ar{color:var(--muted)}
-.result .head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.result .head{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin-bottom:8px}
+.result .head .hl{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap}
 .result .head .r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .tag{display:inline-block;padding:1px 9px;border-radius:999px;font-size:12px;background:var(--soft);border:1px solid var(--line)}
 .tag.up{color:var(--up);background:color-mix(in srgb,var(--up) 10%,var(--panel));border-color:color-mix(in srgb,var(--up) 25%,var(--line))}
@@ -173,12 +178,12 @@ main.scr{max-width:none;margin:0;padding:0;display:block}
 .colpop{position:absolute;right:0;top:44px;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 34px rgba(16,24,40,.14);padding:10px 14px;min-width:210px}
 .colpop[hidden]{display:none}
 .colpop label{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer}
-.tablebox{overflow:auto;max-height:calc(100vh - 330px);min-height:240px;padding:0;border-radius:14px}
+.tablebox{overflow:auto;max-height:calc(100vh - 215px);min-height:240px;padding:0;border-radius:14px}
 .tablebox table{border-collapse:separate;border-spacing:0}
 .tablebox .sn{display:inline-block;min-width:2.4em;margin-right:4px;text-align:right;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
-.tablebox thead th{top:0;z-index:2;padding:12px 14px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tablebox thead th{top:0;z-index:2;padding:9px 12px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .tablebox thead th[aria-sort]{color:var(--accent)}
-.tablebox td{padding:0 14px;height:46px;border-bottom:1px solid var(--line)}
+.tablebox td{padding:0 12px;height:42px;border-bottom:1px solid var(--line)}
 .tablebox tbody tr{border-bottom:0}
 .tablebox tbody tr:last-child td{border-bottom:0}
 .tablebox td:first-child,.tablebox th:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
@@ -195,6 +200,12 @@ main.scr{max-width:none;margin:0;padding:0;display:block}
 }
 @media (max-width:600px){
   .nmc b{max-width:150px}.av{display:none}
+  .out{padding:10px 12px 40px}.outhd{margin-bottom:8px}.out .sub{display:none}.search{flex:1 1 100%}.search input{height:34px}.search svg{top:9px}
+  #warn .warn{font-size:12px;padding:5px 10px;margin-bottom:8px}
+  .scanbar .pill,.tools .pill{padding:4px 11px;font-size:12.5px}
+  .qbar{gap:6px}.qbtn{padding:5px 10px;font-size:13px}
+  .tabs button{padding:7px 10px;font-size:13.5px}
+  .result .head .tools{gap:6px}
   .tablebox td,.tablebox thead th{padding-left:10px;padding-right:10px}
   .tablebox td{height:42px}
 }
@@ -231,10 +242,9 @@ main.scr{max-width:none;margin:0;padding:0;display:block}
       <div class="search"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg><input id="q" type="search" placeholder="Search companies…" autocomplete="off" aria-label="Filter the results by symbol or company name"></div>
     </div>
     <div id="warn"></div>
-    <div class="scanbar"><div class="scanwrap" id="scanWrap"><button type="button" class="scanbtn" id="scanBtn" aria-expanded="false" aria-haspopup="true"><span class="mut">Scan</span><b id="scanName">Choose a scan</b><i>▾</i></button>
+    <div class="scanbar"><div class="scanwrap" id="scanWrap"><button type="button" class="scanbtn" id="scanBtn" aria-expanded="false" aria-haspopup="true"><span class="mut">Scan</span><b id="scanName">Choose a scan</b><span class="qn" id="scanBadge" hidden></span><i>▾</i></button>
       <div class="scanpop" id="scanPop" hidden><input type="search" id="scanQ" placeholder="Find a scan…" aria-label="Find a scan" autocomplete="off"><div id="scanList"></div></div></div>
-      <span class="note" id="scanNote"></span><span class="grow"></span><button type="button" class="pill" id="newScan" title="Start again with no filters">＋ New scan</button><button type="button" class="pill" id="saveTop" title="Keep these filters under a name">Save scan</button></div>
-    <div class="crit" id="crit"></div>
+      <span class="note" id="scanNote" hidden></span><div class="crit" id="crit"></div><button type="button" class="pill" id="newScan" title="Start again with no filters">＋ New scan</button><button type="button" class="pill" id="saveTop" title="Keep these filters under a name">Save scan</button></div>
     <div class="qbar" id="qbar"></div>
     <div class="tabs" id="tabs" role="tablist" aria-label="Column sets"></div>
     <div class="result" id="result"></div>
@@ -422,8 +432,9 @@ async function run(){
     // the Desk's "Screener" list is whatever the last run returned
     try{localStorage.setItem('setupdesk.screen',JSON.stringify({syms:d.rows.map(r=>r.sym),n:d.matched,at:new Date().toISOString()}))}catch(e){}
     const fun=d.funnel.length>1?`<div class="funnel">${d.funnel.map((st,i,a)=>`<span class="st${i===a.length-1?' last':''}"><b>${nf0.format(st.n)}</b> <span class="mut">${esc(st.label)}</span></span>`).join('<span class="ar">→</span>')}</div>`:'';
-    $('#result').innerHTML=`${fun}<div class="head"><div id="cnt"></div><div class="r tools"><span class="note">Prices as of ${esc(d.asof)}.${d.rows.some(r=>r.checked==='u')?' <span style="color:var(--amber);font-weight:600">†</span> Yahoo figure, no filing has confirmed that quarter yet.':''}</span>${d.rows.length?`<a class="pill" href="/?list=screener" style="text-decoration:none" title="Open the stocks of this screen on the Desk">Open on Desk →</a>`:''}<div class="colmenu"><button class="pill" id="colBtn" aria-expanded="false">✎ Edit columns</button><div class="colpop" id="colPop" hidden></div></div><button class="pill" id="dl" title="Download the table as a CSV file">⤓ Download</button></div></div>
-      <div class="ctools" id="ctools" style="display:none"></div><div class="cgrid" id="charts" style="display:none"></div><div class="card tablebox"><table><thead></thead><tbody></tbody></table></div><div class="pager" id="pager"></div>`;
+    $('#result').innerHTML=`<div class="head"><div class="hl"><span id="cnt"></span>${fun}</div><div class="r tools">${d.rows.length?`<a class="pill" href="/?list=screener" style="text-decoration:none" title="Open the stocks of this screen on the Desk">Open on Desk →</a>`:''}<div class="colmenu"><button class="pill" id="colBtn" aria-expanded="false">✎ Edit columns</button><div class="colpop" id="colPop" hidden></div></div><button class="pill" id="dl" title="Download the table as a CSV file">⤓ Download</button></div></div>
+      <div class="ctools" id="ctools" style="display:none"></div><div class="cgrid" id="charts" style="display:none"></div><div class="card tablebox"><table><thead></thead><tbody></tbody></table></div><div class="pager" id="pager"></div>${d.rows.some(r=>r.checked==='u')?'<p class="note" style="margin:8px 4px 0"><span style="color:var(--amber);font-weight:600">†</span> Yahoo figure: no company filing has confirmed that quarter yet.</p>':''}`;
+    $('#sub').textContent=`Every NSE stock · prices as of ${d.asof}`;
     draw();
   }catch(e){$('#result').innerHTML=`<div class="warn">Could not run the screen: ${esc(e.message)}</div>`}
   $('#run').disabled=false;$('#run').textContent='Run screen';
@@ -647,7 +658,7 @@ function renderScans(){
   $('#scanList').innerHTML=h||'<div class="none">Nothing matches.</div>';
   $('#scanName').textContent=scanLabel();
   const nw=SAVED.reduce((a,s)=>a+s.new.length,0);
-  $('#scanNote').textContent=nw?`${nw} new match${nw>1?'es':''} in your saved screens`:'';
+  const bd=$('#scanBadge');bd.hidden=!nw;bd.textContent=nw+' new';$('#scanBtn').title=nw?`${nw} new match${nw>1?'es':''} in your saved screens`:'';
 }
 const closeScans=()=>{$('#scanPop').hidden=true;$('#scanBtn').setAttribute('aria-expanded','false')};
 $('#scanBtn').onclick=()=>{const p=$('#scanPop');p.hidden=!p.hidden;$('#scanBtn').setAttribute('aria-expanded',String(!p.hidden));if(!p.hidden){renderScans();$('#scanQ').focus()}};
