@@ -6,6 +6,7 @@
     python -m backend.indianapi --fetch 20 --retry           # first re-ask the stocks that returned no data
     python -m backend.indianapi --fetch 2500 --all           # the audit pass: every company in the screener (one call each)
     python -m backend.indianapi --annual 2500                # yearly results of accepted stocks; fills missing annual profit
+    python -m backend.indianapi --gaps --max-calls 600       # every ordinary NSE stock still without statements, largest first (name, then symbol; company confirmed by net profit or NSE code)
     python -m backend.indianapi --banks --max-calls 300      # banks, lenders and insurers: all statements, verified by net profit
     python -m backend.indianapi --stats all --max-calls 1200   # EVERY statement of accepted stocks in one call each, biggest first, resumable (use this)
     python -m backend.indianapi --stats balancesheet,cashflow --max-calls 1000   # single statements (costs one call per statement: avoid)
@@ -429,7 +430,10 @@ def fetch_all_unasked(con, sym):
     """A stock IndianAPI was never asked about (banks, lenders, insurers): one `all` call by name (symbol as the fallback), accepted when its quarterly net profit agrees
     with ours for most common quarters. Stores the statements only; our quarterly rows are untouched."""
     row = con.execute("SELECT name FROM stock WHERE sym=?", (sym,)).fetchone()
-    name = row["name"] if row and row["name"] else sym
+    name = row["name"] if row and row["name"] else None
+    if not name:
+        u = market.connect().execute("SELECT name FROM universe WHERE sym=?", (sym,)).fetchone()
+        name = u[0] if u and u[0] else sym
     mine = {r["qend"]: r["np"] for r in con.execute("SELECT qend,np FROM quarter WHERE sym=? AND np IS NOT NULL", (sym,))}
     for q in dict.fromkeys([_search_name(name), sym]):
         if used(con) >= monthly_limit():
@@ -571,6 +575,33 @@ def main(argv):
             if status == "limit":
                 break
         print(f"np_annual filled for {filled} stocks; calls used this month: {used(con)} of {monthly_limit()}")
+        return
+    elif "--gaps" in argv:                                      # python -m backend.indianapi --gaps --max-calls 600: statements for every ordinary NSE stock still without them
+        cap = int(argv[argv.index("--max-calls") + 1]) if "--max-calls" in argv else 0
+        if not cap:
+            print("give --max-calls N")
+            return
+        mcon = market.connect()
+        have = {r[0] for r in con.execute("SELECT sym FROM main.ia_stat WHERE stat='yoy_results'")}
+        mcap = dict(mcon.execute("SELECT sym, mcap FROM class").fetchall())
+        todo = [r[0] for r in mcon.execute("SELECT sym FROM universe WHERE COALESCE(series,'EQ') IN ('EQ','BE')") if r[0] not in have]
+        todo.sort(key=lambda x: -(mcap.get(x) or 0))
+        print(f"{len(todo)} ordinary NSE stocks without statements; this run stops after {cap} calls", flush=True)
+        start, n_ok, tried = used(con), 0, 0
+        for i, sym in enumerate(todo):
+            if used(con) - start >= cap:
+                break
+            if i % 50 == 0 and not healthy(con):
+                print("IndianAPI's company search is not answering: stopping.", flush=True)
+                break
+            status, detail = fetch_all_unasked(con, sym)
+            tried += 1
+            n_ok += status == "ok"
+            if tried % 20 == 0 or status == "limit":
+                print(f"  {tried} tried, {n_ok} stored | last {sym} {status} | calls this run {used(con) - start}", flush=True)
+            if status == "limit":
+                break
+        print(f"stored {n_ok} of {tried} tried; calls used this month (my count): {used(con)}")
         return
     elif "--banks" in argv:                                     # python -m backend.indianapi --banks --max-calls 300: banks, lenders and insurers (never asked before)
         cap = int(argv[argv.index("--max-calls") + 1]) if "--max-calls" in argv else 0

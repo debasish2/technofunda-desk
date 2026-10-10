@@ -438,7 +438,7 @@ def api_company_ia(sym: str, stat: str):
     """A statement downloaded from IndianAPI (balancesheet, cashflow, ratios, shareholding...), as sent: {body, fetched}, or {} when we hold none."""
     import json as _json
     from . import indianapi
-    if stat not in indianapi.STATS:
+    if stat not in indianapi.ALL_KEYS:
         raise HTTPException(404, "unknown statement")
     r = indianapi._con().execute("SELECT body, fetched FROM main.ia_stat WHERE sym=? AND stat=?", (sym.upper(), stat)).fetchone()
     return {"body": _json.loads(r["body"]), "fetched": r["fetched"]} if r else {}

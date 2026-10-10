@@ -2331,6 +2331,7 @@ function annHtml(a){
   return conc+rat+`<div class="card" id="annCard"><h4>Announcements <small class="mut">latest ${a.recent.length}, from BSE${a.asof?' · updated '+esc(a.asof.replace('T',' ')):''}</small></h4><div class="annf" id="annf">${chips}</div><div id="annl">${annList(a,'all')}</div></div>`;
 }
 const IA_META={
+  yoy_results:{title:'Profit & loss',unit:'₹ crore · years ending March · consolidated where the company has subsidiaries',pct:/%/,d:0,bold:/^(Sales|Revenue|Operating Profit|Financing Profit|Net Profit)$/},
   cashflow:{title:'Cash flow',unit:'₹ crore · years ending March',pct:/CFO\/OP/,d:0,bold:/^(Cash from Operating|Free Cash)/},
   ratios:{title:'Ratios',unit:'days and % · years ending March',pct:/%/,d:0,bold:/^(ROCE|Cash Conversion)/},
   profit_loss_stats:{title:'Growth and returns',unit:'% per year over each period',pct:/./,d:1,bold:/^Compounded Profit/},
@@ -2341,7 +2342,7 @@ function iaTable(j,stat){
   const M=IA_META[stat],b=j.body,labs=Object.keys(b);if(!labs.length)return '';
   const periods=[...new Set(labs.flatMap(l=>Object.keys(b[l])))];                 // rows can end on different labels (TTM, 1 Year, Last Year): keep them all
   const num=v=>typeof v==='string'?(isNaN(parseFloat(v))?null:parseFloat(v)):v;                 // the growth summary sends '9%' as text
-  const rows=labs.map(l=>[l,periods.map(p=>num(b[l][p])),{bold:M.bold.test(l),pct:M.pct.test(l)?1:0,d:M.d}]);
+  const rows=labs.map(l=>[l,periods.map(p=>num(b[l][p])),{bold:M.bold.test(l),pct:M.pct.test(l)?1:0,eps:/^EPS/.test(l)?1:0,d:M.d}]);
   return `<h4 class="ftitle">${M.title} <small>${M.unit}</small></h4>`+fTable(periods.map(p=>iaCol(p).replace(/:$/,'')),rows)
     +'<p class="note" style="margin:6px 2px 14px">Source: IndianAPI, in the same standard layout and rounding as Screener.in, downloaded '+esc((j.fetched||'').slice(0,10))+'. Not checked against the exchange filings.</p>';
 }
@@ -2491,12 +2492,13 @@ function fillFund(d){
   }
   if(!d.currency_ok){box.innerHTML='<div class="card"><p class="mut">This company reports in a currency other than rupees, so the free source\'s annual statements are not shown.</p></div>';return}
   if(fsub==='pl'){
-    const t=d.pl;if(!t){box.innerHTML='<div class="card"><p class="mut">No annual profit and loss is available from the free source for this stock.</p></div>';return}
+    const t=d.pl,symP=cur.sym;if(!t){box.innerHTML=basisBar()+'<div id="iapl"></div><div class="card"><p class="mut">No annual profit and loss from Yahoo Finance is available for this stock.</p></div>';fillIA('iapl',symP,'yoy_results','pl');return}
     const R=Object.fromEntries(t.rows),ttm=d.ttm&&d.ttm.values&&Object.keys(d.ttm.values).length?d.ttm:null;
     const col=lab=>{const v=R[lab]||[];return ttm&&ttm.values[lab]!=null?[...v,ttm.values[lab]]:v};
     const per=[...t.periods.map(monYr),...(ttm?['TTM']:[])],sales=col('Sales'),eb=col('EBITDA'),pbt=col('Profit before tax'),tax=col('Tax'),np=col('Net profit');
     const rows=[['Sales',sales,{bold:1}],['Sales growth',growth(sales),{pct:1,pctCls:1,sub:1}],['EBITDA',eb],['EBITDA margin',eb.map((v,i)=>sales[i]?v/sales[i]*100:null),{pct:1,sub:1}],['Depreciation',col('Depreciation')],['Operating profit (EBIT)',col('Operating profit (EBIT)')],['Interest',col('Interest')],['Profit before tax',pbt],['Tax',tax],['Tax rate',tax.map((v,i)=>pbt[i]>0&&v!=null?v/pbt[i]*100:null),{pct:1,sub:1}],['Net profit',np,{bold:1}],['Net profit growth',growth(np),{pct:1,pctCls:1,sub:1}],['EPS (₹)',col('EPS (₹)'),{eps:1}]].filter(r=>r[1].some(v=>v!=null));
-    box.innerHTML=basisBar()+`<h4 class="ftitle">Profit &amp; loss <small>consolidated · ₹ crore · years ending March</small></h4>`+fTable(per,rows)
+    queueMicrotask(()=>fillIA('iapl',symP,'yoy_results','pl'));
+    box.innerHTML=basisBar()+'<div id="iapl"></div>'+`<h4 class="ftitle">Profit &amp; loss, more detail <small>Yahoo Finance · consolidated · ₹ crore · last four to five years</small></h4>`+fTable(per,rows)
       +note('Source: Yahoo Finance annual statements (consolidated where the company has subsidiaries), last four to five years. TTM is the sum of the last four reported quarters. EBITDA here includes other income. Not checked against the exchange filings.');
     return;
   }
