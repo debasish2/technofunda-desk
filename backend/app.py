@@ -855,7 +855,7 @@ def api_run(body: dict = Body(...)):
     cols = ["name", "last", "chg", "value_cr", "stage", "template", "supertrend", "sar", "rs", "rs1m", "rs3m", "rs6m",
             "rs12m", "vs500_55", "vs500_123", "mansfield", "momentum", "high52_pct", "consol_bars", "consol_range", "consol_breakout", "vcp_status", "vcp_n", "vcp_last", "vcp_dist",
             "industry", "sector", "ind_3m", "ind_rank_3m", "mcap", "rsi14", "vs500_252", "pullback20", "rvol5", "listed_days", "value30_cr",
-            "ret_1w", "ret_1m", "ret_3m", "ret_6m", "ret_1y", "ret_3y", "low52_pct", "hi52", "lo52", "d50", "d200", "rs1m", "rs3m", "rs6m", "rs12m"]
+            "adx14", "adx14w", "rsi14w", "vol5", "ret_1w", "ret_1m", "ret_3m", "ret_6m", "ret_1y", "ret_3y", "low52_pct", "hi52", "lo52", "d50", "d200", "rs1m", "rs3m", "rs6m", "rs12m"]
     fcols = ["grade", "sales_yoy", "profit_yoy", "profit_state", "opm_ttm", "pe", "pb", "roce", "gnpa_pct", "nnpa_pct", "pledge_pct", "promo_chg", "insider_net", "latest_q", "is_fin", "checked", "profit_cagr3", "profit_cagr_fy", "de", "eps_rating"]
     rows = []
     for sym, r in hit.head(int(body.get("limit") or 300)).iterrows():
@@ -875,6 +875,19 @@ def api_cols():
     df = screencols.table(market_tables()["snap"])
     cols = list(df.columns)
     return {"cols": cols, "data": {sym: [clean(v) for v in row] for sym, row in zip(df.index, df.itertuples(index=False, name=None))}}
+
+
+@app.post("/api/screener/bars")
+def api_bars(body: dict = Body(...)):
+    """Daily bars for a handful of stocks (the Screener's Chart tab): {"syms": [...], "bars": 130} -> {"d": [dates], "s": {sym: {o,h,l,c,v}}}."""
+    wide = market_tables()["data"][0]
+    syms = [x for x in (body.get("syms") or [])[:60] if x in wide["c"].columns]
+    n = max(5, min(int(body.get("bars") or 130), 800))
+    idx = wide["c"].index[-n:]
+    out = {}
+    for sym in syms:
+        out[sym] = {k: [None if v != v else round(float(v), 2 if k != "v" else 0) for v in wide[k].loc[idx, sym].tolist()] for k in ("o", "h", "l", "c", "v")}
+    return {"d": [str(x) for x in idx], "s": out}
 
 
 @app.get("/api/screener/indexes")

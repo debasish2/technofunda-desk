@@ -66,6 +66,20 @@ def _one(stats):
         o[k + "_ttm"] = _ttm(y, *labels)
         v, pv, _ = _last(y, *labels)
         o[k + "_fy"], o[k + "_g_fy"] = v, _growth(v, pv)
+    # growth from the quarterly results: newest quarter against the one before (QoQ) and against the same quarter a year ago (YoY), and the last four quarters against the four before (TTM)
+    q = stats.get("quarter_results") or {}
+    for k, labels in (("rev", ("Sales", "Revenue")), ("pat", ("Net Profit",)), ("eps", ("EPS in Rs",))):
+        for lb in labels:
+            d = q.get(lb)
+            p = _pairs(d) if isinstance(d, dict) else []
+            if len(p) >= 2:
+                v = [x[1] for x in p]
+                o[k + "_qoq"] = _growth(v[-1], v[-2])
+                if len(v) >= 5 and p[-1][0][1] == p[-5][0][1]:
+                    o[k + "_yoy_q"] = _growth(v[-1], v[-5])
+                if len(v) >= 8:
+                    o[k + "_ttm_g"] = _growth(sum(v[-4:]), sum(v[-8:-4]))
+                break
     o["opm_ttm"] = _ttm(y, "OPM %", "Financing Margin %")
     o["tax_pct"] = _last(y, "Tax %")[0]
     o["payout"] = _last(y, "Dividend Payout %")[0]

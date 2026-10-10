@@ -42,6 +42,25 @@ def pct_rank(x):
     return (((r - 1).div(n - 1, axis=0)) * 100).clip(1, 99).round()
 
 
+def rsi_of(C, n=14):
+    d = C.diff()
+    return 100 - 100 / (1 + d.clip(lower=0).ewm(alpha=1 / n, adjust=False, min_periods=n).mean() / (-d.clip(upper=0)).ewm(alpha=1 / n, adjust=False, min_periods=n).mean())
+
+
+def adx_of(H, L, C, n=14):
+    """ADX for every column at once: Wilder-smoothed directional indices, DX averaged over n bars."""
+    up, dn = H.diff(), -L.diff()
+    pdm = up.where((up > dn) & (up > 0), 0.0)
+    mdm = dn.where((dn > up) & (dn > 0), 0.0)
+    pc = C.shift(1)
+    tr = np.maximum(H - L, np.maximum((H - pc).abs(), (L - pc).abs()))
+    w = lambda x: x.ewm(alpha=1 / n, adjust=False, min_periods=n).mean()
+    atr = w(tr)
+    pdi, mdi = 100 * w(pdm) / atr, 100 * w(mdm) / atr
+    dx = 100 * (pdi - mdi).abs() / (pdi + mdi)
+    return dx.rolling(n, min_periods=n).mean()                # the average of DX over n bars: the form Indian charting sites show (checked against StockScans: TCS 29.5, ITC 17.0)
+
+
 def supertrend(H, L, C, period=10, mult=3.0):
     """+1 = price above the trailing band (uptrend), -1 = below."""
     pc = C.shift(1)
@@ -254,7 +273,12 @@ def snapshot(data=None):
         listed = listed.where(~listed.index.isin(extra))
     h20, l20 = H.rolling(20, min_periods=10).max().iloc[t], L.rolling(20, min_periods=10).min().iloc[t]
     rv = V / V.shift(1).rolling(50, min_periods=20).mean()                      # volume against the average of the 50 sessions before it
+    # weekly RSI and ADX (the last, possibly unfinished, week counts), daily ADX and the 5-session average volume
+    W = {k: v.resample("W-FRI").agg(f) for k, (v, f) in {"c": (C.set_axis(pd.to_datetime(C.index)), "last"), "h": (H.set_axis(pd.to_datetime(H.index)), "max"),
+                                                       "l": (L.set_axis(pd.to_datetime(L.index)), "min")}.items()}
+    adx_d, adx_w, rsi_w = adx_of(H, L, C).iloc[t], adx_of(W["h"], W["l"], W["c"]).iloc[-1], rsi_of(W["c"]).iloc[-1]
     snap = pd.DataFrame({
+        "adx14": adx_d, "adx14w": adx_w, "rsi14w": rsi_w, "vol5": V.rolling(5, min_periods=3).mean().iloc[t],
         "value30_cr": (C * V).rolling(30, min_periods=15).mean().iloc[t] / 1e7, "ema21": row(e21), "high20": h20, "low20": l20,
         "pullback20": (1 - last / h20) * 100, "rvol": rv.iloc[t], "rvol5": rv.iloc[t - 4:t + 1].max(), "listed_days": listed,
         "ret_1w": (C.iloc[t] / C.iloc[t - 5] - 1) * 100, "ret_1m": (C.iloc[t] / C.iloc[t - 21] - 1) * 100, "ret_3m": (C.iloc[t] / C.iloc[t - 63] - 1) * 100,
@@ -433,6 +457,13 @@ FIELDS = [
      "help": "Wilder's relative strength index on daily closes. 55 and above means the last two weeks of buying outweighed the selling."},
     {"group": "Size & price", "id": "min_mcap", "label": "Market cap >=", "type": "min", "unit": "Rs Cr",
      "help": "Market capitalisation from BSE's listing data, in rupee crore."},
+    {"group": "Size & price", "id": "vol5_min", "label": "Volume, 5-day average >=", "type": "min", "unit": "shares",
+     "help": "Average daily volume (number of shares) over the last 5 sessions."},
+    {"group": "Price patterns", "id": "chg_min", "label": "Returns 1D >=", "type": "min", "unit": "%",
+     "help": "Price change today against the previous close, in percent. 3 keeps stocks up 3% or more."},
+    {"group": "Price patterns", "id": "ret_1w_min", "label": "Returns 1W >=", "type": "min", "unit": "%", "help": "Price change over the last 5 sessions."},
+    {"group": "Price patterns", "id": "ret_1m_min", "label": "Returns 1M >=", "type": "min", "unit": "%", "help": "Price change over the last 21 sessions."},
+    {"group": "Price patterns", "id": "ret_3m_min", "label": "Returns 3M >=", "type": "min", "unit": "%", "help": "Price change over the last 63 sessions."},
     {"group": "Size & price", "id": "max_mcap", "label": "Market cap <=", "type": "max", "unit": "Rs Cr",
      "help": "Upper limit on market capitalisation, in rupee crore: with the lower limit above it makes a size basket (small 500-10,000, medium 10,000-20,000, large 20,000+)."},
     {"group": "Size & price", "id": "min_price", "label": "Price >=", "type": "min", "unit": "Rs",
@@ -507,6 +538,12 @@ def apply(snap, filters):
             m &= snap["rsi14"] >= float(v)
         elif fid == "min_mcap":
             m &= snap["mcap"] >= float(v)
+        elif fid == "vol5_min":
+            m &= snap["vol5"] >= float(v)
+        elif fid == "chg_min":
+            m &= snap["chg"] >= float(v)
+        elif fid in ("ret_1w_min", "ret_1m_min", "ret_3m_min"):
+            m &= snap[fid[:-4]] >= float(v)
         elif fid == "max_mcap":
             m &= snap["mcap"] <= float(v)
         elif fid == "min_price":
